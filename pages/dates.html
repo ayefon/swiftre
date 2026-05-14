@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dates — SwiftRE Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Toggle navigation">&#9776;</button>
+
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <h1>SwiftRE Docs</h1>
+        <p>Rules Engine Reference</p>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li>
+                <a href="rule-language.html">Rule Language</a>
+                <ul>
+                    <li><a href="conditions.html">Conditions</a></li>
+                    <li><a href="actions.html">Actions</a></li>
+                    <li><a href="dates.html">Dates</a></li>
+                </ul>
+            </li>
+            <li><a href="data-model.html">Data Model</a></li>
+            <li><a href="execution.html">Execution Modes</a></li>
+            <li><a href="api-reference.html">API Reference</a></li>
+            <li><a href="integration.html">Form Integration</a></li>
+            <li><a href="playground.html">Playground</a></li>
+            <li><a href="examples.html">Examples</a></li>
+            <li><a href="deployment.html">Deployment</a></li>
+        </ul>
+    </nav>
+</aside>
+
+<main class="content">
+    <div class="content-inner">
+
+        <h1>Dates</h1>
+        <p class="lead">SwiftRE has first-class date support. Dates can be compared, added to, subtracted from, and used to compute spans between events.</p>
+
+        <h2>Date Literals</h2>
+        <p>Explicit dates use the <code>DATE</code> keyword with an ISO 8601 string:</p>
+        <pre><code class="language-swiftre">WHEN startDate IS BEFORE DATE "2025-06-15"
+THEN SET cutoffDate TO DATE "2025-12-31"</code></pre>
+
+        <h2>Date References</h2>
+        <p>Built-in references that resolve at execution time:</p>
+        <table>
+            <thead>
+                <tr><th>Reference</th><th>Value</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>TODAY</code></td><td>Current date (midnight)</td></tr>
+                <tr><td><code>NOW</code></td><td>Current date and time</td></tr>
+                <tr><td><code>YESTERDAY</code></td><td>One day before today</td></tr>
+                <tr><td><code>TOMORROW</code></td><td>One day after today</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Relative Dates</h2>
+        <p>Express dates relative to the current moment:</p>
+        <table>
+            <thead>
+                <tr><th>Syntax</th><th>Example</th><th>Meaning</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>N DAYS AGO</code></td><td><code>7 DAYS AGO</code></td><td>7 days before today</td></tr>
+                <tr><td><code>N DAYS FROM NOW</code></td><td><code>30 DAYS FROM NOW</code></td><td>30 days from today</td></tr>
+                <tr><td><code>N MONTHS AGO</code></td><td><code>3 MONTHS AGO</code></td><td>3 months before today</td></tr>
+                <tr><td><code>N MONTHS FROM NOW</code></td><td><code>6 MONTHS FROM NOW</code></td><td>6 months from today</td></tr>
+                <tr><td><code>N YEARS AGO</code></td><td><code>1 YEAR AGO</code></td><td>1 year before today</td></tr>
+                <tr><td><code>N YEARS FROM NOW</code></td><td><code>2 YEARS FROM NOW</code></td><td>2 years from today</td></tr>
+            </tbody>
+        </table>
+        <pre><code class="language-swiftre">WHEN hireDate IS ON OR AFTER 90 DAYS AGO
+THEN INFO "Employee is still in probation period"</code></pre>
+
+        <h2>Date Arithmetic</h2>
+        <p>Add or subtract durations from any date value or field reference. The result is a date.</p>
+        <pre><code class="language-swiftre">TODAY + 30 DAYS
+`contractStart` + 1 YEAR
+`deadline` - 7 DAYS
+DATE "2025-01-01" + 6 MONTHS</code></pre>
+
+        <h3>In Conditions</h3>
+        <pre><code class="language-swiftre">WHEN expiryDate IS BEFORE TODAY + 30 DAYS
+THEN WARNING "Expiring within 30 days"
+
+WHEN `renewalDate` IS ON OR BEFORE `contractStart` + 1 YEAR
+THEN INFO "Contract is within first year"</code></pre>
+
+        <h3>In SET Actions</h3>
+        <pre><code class="language-swiftre">THEN SET expiryDate TO TODAY + 90 DAYS
+THEN SET renewalDate TO `contractStart` + 1 YEAR
+THEN SET reminderDate TO `deadline` - 14 DAYS</code></pre>
+
+        <h2>Date Difference</h2>
+        <p>Compute the integer span between two dates. The result is a whole number representing the count of days, months, or years.</p>
+
+        <pre><code class="language-swiftre">DAYS BETWEEN startDate AND endDate
+MONTHS BETWEEN hireDate AND TODAY
+YEARS BETWEEN birthDate AND DATE "2025-01-01"</code></pre>
+
+        <h3>In Conditions</h3>
+        <p>The date difference expression produces an integer that you can compare like any other number:</p>
+        <pre><code class="language-swiftre">WHEN DAYS BETWEEN startDate AND endDate IS GREATER THAN 14
+THEN WARNING "Duration exceeds two weeks"
+
+WHEN YEARS BETWEEN birthDate AND TODAY IS LESS THAN 18
+THEN ERROR ON age "Must be at least 18 years old"
+
+WHEN MONTHS BETWEEN hireDate AND TODAY IS AT LEAST 12
+THEN INFO "Eligible for annual review"</code></pre>
+
+        <h3>In SET Actions</h3>
+        <pre><code class="language-swiftre">THEN SET contractDays TO DAYS BETWEEN `contract.start` AND `contract.end`
+THEN SET tenure TO YEARS BETWEEN hireDate AND TODAY
+THEN SET monthsActive TO MONTHS BETWEEN activationDate AND TODAY</code></pre>
+
+        <h2>Date Coercion</h2>
+        <p>When comparing a date field against a string value (or vice versa), SwiftRE automatically attempts ISO 8601 parsing. If a fact value like <code>"2025-06-15"</code> is submitted as a string, it will be coerced to a date for comparison against date operators or date literals.</p>
+
+        <div class="callout tip">
+            <p><strong>Tip:</strong> If your JSON facts contain date strings in ISO 8601 format (<code>yyyy-MM-dd</code> or <code>yyyy-MM-dd'T'HH:mm:ss</code>), they will work seamlessly with date operators. No special formatting is needed on the client side.</p>
+        </div>
+
+    </div>
+</main>
+
+<script src="../js/nav.js"></script>
+<script src="../js/highlight.js"></script>
+</body>
+</html>

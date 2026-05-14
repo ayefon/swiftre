@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Execution Modes — SwiftRE Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Toggle navigation">&#9776;</button>
+
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <h1>SwiftRE Docs</h1>
+        <p>Rules Engine Reference</p>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li>
+                <a href="rule-language.html">Rule Language</a>
+                <ul>
+                    <li><a href="conditions.html">Conditions</a></li>
+                    <li><a href="actions.html">Actions</a></li>
+                    <li><a href="dates.html">Dates</a></li>
+                </ul>
+            </li>
+            <li><a href="data-model.html">Data Model</a></li>
+            <li><a href="execution.html">Execution Modes</a></li>
+            <li><a href="api-reference.html">API Reference</a></li>
+            <li><a href="integration.html">Form Integration</a></li>
+            <li><a href="playground.html">Playground</a></li>
+            <li><a href="examples.html">Examples</a></li>
+            <li><a href="deployment.html">Deployment</a></li>
+        </ul>
+    </nav>
+</aside>
+
+<main class="content">
+    <div class="content-inner">
+
+        <h1>Execution Modes</h1>
+        <p class="lead">SwiftRE supports two execution modes that control how rules are evaluated: <strong>single-pass</strong> and <strong>iterative</strong>.</p>
+
+        <h2>Single-Pass Mode</h2>
+        <p>The default mode. All rules are evaluated once, in priority order. No re-evaluation occurs, even if SET actions modify facts that other rules depend on.</p>
+        <pre><code>POST /api/v1/rulesets/my-rules/execute
+{
+  "facts": {"age": 16, "email": null},
+  "mode": "singlePass"
+}</code></pre>
+        <p><strong>When to use:</strong> Form validation, simple checks, read-only rules (no SET actions), or when you want predictable single-cycle behavior.</p>
+
+        <h2>Iterative Mode</h2>
+        <p>Rules are evaluated repeatedly until no more changes occur (quiescence). Each time a SET action modifies a fact, the engine re-evaluates rules that depend on the changed field.</p>
+        <pre><code>POST /api/v1/rulesets/my-rules/execute
+{
+  "facts": {"orderTotal": 150, "customerType": "gold"},
+  "mode": {"iterative": 10}
+}</code></pre>
+        <p>The number (10 in this example) is the maximum number of iterations allowed.</p>
+
+        <h3>How Iterative Mode Works</h3>
+        <ol class="steps">
+            <li>
+                <strong>Initial pass</strong>
+                <p>All rules are evaluated in priority order. SET actions modify working memory and record which fact paths changed.</p>
+            </li>
+            <li>
+                <strong>Selective re-evaluation</strong>
+                <p>Only rules whose conditions depend on changed fact paths are re-evaluated. This is more efficient than re-evaluating all rules.</p>
+            </li>
+            <li>
+                <strong>Repeat until stable</strong>
+                <p>If re-evaluation produces more changes, the cycle continues. Evaluation stops when one of three conditions is met.</p>
+            </li>
+        </ol>
+
+        <h3>Termination Conditions</h3>
+        <table>
+            <thead>
+                <tr><th>Reason</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>complete</code></td><td><strong>Quiescence.</strong> No SET actions fired during the last pass, or no rules depend on the changed facts. The system has reached a stable state.</td></tr>
+                <tr><td><code>maxIterationsReached</code></td><td>The iteration count hit the configured maximum. The current state is returned, but it may not be fully stable.</td></tr>
+                <tr><td><code>cycleDetected</code></td><td>The engine detected that the working memory returned to a previously seen state, indicating an infinite loop. Execution stops to prevent runaway evaluation.</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Example: Chained SET Rules</h3>
+        <pre><code class="language-swiftre">RULE "Apply Discount" PRIORITY 10
+WHEN `customerType` IS "gold" AND orderTotal IS GREATER THAN 100
+THEN SET discount TO 15
+
+RULE "Calculate Final" PRIORITY 5
+WHEN discount IS SET AND discount IS GREATER THAN 0
+THEN SET finalTotal TO orderTotal
+  AND INFO "Discount of {discount}% applied"</code></pre>
+
+        <p>In single-pass mode, if "Apply Discount" fires first (higher priority) and sets <code>discount</code> to 15, "Calculate Final" will also evaluate in the same pass because it comes later in priority order.</p>
+
+        <p>In iterative mode, the engine recognizes that <code>discount</code> changed and re-evaluates rules that depend on it, ensuring "Calculate Final" fires even if priority ordering would have placed it first.</p>
+
+        <h3>Cycle Detection</h3>
+        <p>The engine hashes the complete working memory state after each iteration. If a previously seen hash reappears, a cycle is detected:</p>
+        <pre><code class="language-swiftre">RULE "Toggle A"
+WHEN flag IS true
+THEN SET flag TO false
+
+RULE "Toggle B"
+WHEN flag IS false
+THEN SET flag TO true</code></pre>
+        <p>This ruleset would cycle forever. The engine detects the repeating state and stops with <code>terminationReason: "cycleDetected"</code>.</p>
+
+        <h2>Choosing a Mode</h2>
+        <table>
+            <thead>
+                <tr><th>Scenario</th><th>Recommended Mode</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Form validation (ERROR, WARNING, INFO only)</td><td>Single-pass</td></tr>
+                <tr><td>Rules with no SET actions</td><td>Single-pass</td></tr>
+                <tr><td>Rules that SET values other rules depend on</td><td>Iterative</td></tr>
+                <tr><td>Multi-step calculations or derived fields</td><td>Iterative</td></tr>
+                <tr><td>Workflow state machines</td><td>Iterative (with reasonable max)</td></tr>
+            </tbody>
+        </table>
+
+        <div class="callout tip">
+            <p><strong>Tip:</strong> Start with single-pass mode. Only switch to iterative if your rules use SET actions and downstream rules depend on those modified values. Set the max iterations to a reasonable number (5&ndash;20) for safety.</p>
+        </div>
+
+        <h2>Response Fields</h2>
+        <p>Both modes return the same response structure. The <code>iterations</code> and <code>terminationReason</code> fields tell you how execution progressed:</p>
+        <pre><code>{
+  "events": [...],
+  "facts": {...},
+  "iterations": 3,
+  "terminationReason": "complete",
+  "summary": {"errors": 0, "warnings": 1, "infos": 1, "modifications": 2, "total": 4}
+}</code></pre>
+
+    </div>
+</main>
+
+<script src="../js/nav.js"></script>
+<script src="../js/highlight.js"></script>
+</body>
+</html>

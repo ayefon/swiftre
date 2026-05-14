@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actions — SwiftRE Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Toggle navigation">&#9776;</button>
+
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <h1>SwiftRE Docs</h1>
+        <p>Rules Engine Reference</p>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li>
+                <a href="rule-language.html">Rule Language</a>
+                <ul>
+                    <li><a href="conditions.html">Conditions</a></li>
+                    <li><a href="actions.html">Actions</a></li>
+                    <li><a href="dates.html">Dates</a></li>
+                </ul>
+            </li>
+            <li><a href="data-model.html">Data Model</a></li>
+            <li><a href="execution.html">Execution Modes</a></li>
+            <li><a href="api-reference.html">API Reference</a></li>
+            <li><a href="integration.html">Form Integration</a></li>
+            <li><a href="playground.html">Playground</a></li>
+            <li><a href="examples.html">Examples</a></li>
+            <li><a href="deployment.html">Deployment</a></li>
+        </ul>
+    </nav>
+</aside>
+
+<main class="content">
+    <div class="content-inner">
+
+        <h1>Actions</h1>
+        <p class="lead">Actions define what happens when a rule fires. Multiple actions in a single rule are separated by <code>AND</code>.</p>
+
+        <h2>Message Actions</h2>
+        <p>These actions emit events with a message string. The event kind determines how the message should be treated by the consuming application.</p>
+
+        <h3>ERROR</h3>
+        <p>Emit an error event. Typically used for validation failures that must be corrected.</p>
+        <pre><code class="language-swiftre">THEN ERROR "Email is required"</code></pre>
+
+        <h3>WARNING</h3>
+        <p>Emit a warning event. Useful for non-blocking issues the user should be aware of.</p>
+        <pre><code class="language-swiftre">THEN WARNING "This order exceeds the typical limit"</code></pre>
+
+        <h3>INFO</h3>
+        <p>Emit an informational event. Used for feedback, confirmations, or helpful context.</p>
+        <pre><code class="language-swiftre">THEN INFO "Welcome, {firstName}!"</code></pre>
+
+        <h3>Field-targeted Variants (ON)</h3>
+        <p>Associate a message action with a specific field using the <code>ON</code> keyword. This enables precise field highlighting in form UIs without relying on message text matching:</p>
+        <pre><code class="language-swiftre">THEN ERROR ON email "A valid email is required"
+THEN WARNING ON quantity "Quantity seems unusually high"
+THEN INFO ON status "This field was auto-populated"</code></pre>
+        <p>When a field-targeted event is returned, the response includes a <code>field</code> property:</p>
+        <pre><code>{
+  "kind": "error",
+  "ruleName": "Email Required",
+  "field": "email",
+  "message": "A valid email is required"
+}</code></pre>
+
+        <h3>Message Interpolation</h3>
+        <p>Use <code>{factPath}</code> inside message strings to insert the current value of a fact:</p>
+        <pre><code class="language-swiftre">THEN INFO "Welcome, {firstName}! Your order total is {orderTotal}."
+THEN ERROR ON email "The address {email} appears to be invalid"</code></pre>
+        <p>Interpolation works with dotted paths: <code>{address.city}</code>.</p>
+
+        <h2>Data Modification: SET</h2>
+        <p>Modify a fact value in working memory. In iterative mode, this can trigger re-evaluation of rules that depend on the modified field.</p>
+
+        <h3>Setting Literal Values</h3>
+        <pre><code class="language-swiftre">THEN SET status TO "approved"
+THEN SET retryCount TO 0
+THEN SET isVerified TO true</code></pre>
+
+        <h3>Date Arithmetic in SET</h3>
+        <pre><code class="language-swiftre">THEN SET expiryDate TO TODAY + 30 DAYS
+THEN SET renewalDate TO `contractStart` + 1 YEAR
+THEN SET reminderDate TO `deadline` - 7 DAYS</code></pre>
+
+        <h3>Date Difference in SET</h3>
+        <p>Compute the integer span between two dates and store the result:</p>
+        <pre><code class="language-swiftre">THEN SET duration TO DAYS BETWEEN startDate AND endDate
+THEN SET tenure TO YEARS BETWEEN hireDate AND TODAY
+THEN SET monthsRemaining TO MONTHS BETWEEN TODAY AND expiryDate</code></pre>
+
+        <h2>Signal Events: SIGNAL</h2>
+        <p>Emit a custom event for application-level event handlers. Signal events are not displayed in form UIs &mdash; they are passed through in the response for downstream processing.</p>
+
+        <pre><code class="language-swiftre">THEN SIGNAL AN EVENT OF TYPE approvalRequired
+  WITH A PAYLOAD OF "Order {orderId} needs manager approval"</code></pre>
+
+        <p>The type can be a bare word or a quoted string:</p>
+        <pre><code class="language-swiftre">THEN SIGNAL AN EVENT OF TYPE "audit-log"
+  WITH A PAYLOAD OF "User {userId} changed status to {status}"</code></pre>
+
+        <p>In the response, signal events appear with <code>kind: "signal"</code> and the custom type in the payload:</p>
+        <pre><code>{
+  "kind": "signal",
+  "ruleName": "Approval Required",
+  "message": "Order ORD-123 needs manager approval",
+  "payload": {
+    "type": "approvalRequired"
+  }
+}</code></pre>
+
+        <div class="callout">
+            <p><strong>Design intent:</strong> Signal events provide inherent extensibility. Your application registers event handlers for recognized types and ignores or passes through unrecognized ones. No engine modifications are needed to add new application behaviors.</p>
+        </div>
+
+        <h3>Example Use Cases</h3>
+        <ul style="margin-bottom: 1.5rem; padding-left: 1.5rem;">
+            <li>Triggering workflow steps (e.g., sending an order for approval)</li>
+            <li>Audit logging (e.g., recording who changed what and when)</li>
+            <li>Sending notifications (e.g., email or Slack alerts)</li>
+            <li>Integrating with external systems (e.g., CRM updates)</li>
+        </ul>
+
+        <h2>Combining Actions</h2>
+        <p>Chain multiple actions with <code>AND</code>:</p>
+        <pre><code class="language-swiftre">RULE "High-Value Order" PRIORITY 5
+WHEN orderTotal IS GREATER THAN 10000
+THEN WARNING ON orderTotal "High-value order requires review"
+  AND SET requiresApproval TO true
+  AND SIGNAL AN EVENT OF TYPE approvalRequired
+    WITH A PAYLOAD OF "Order {orderId} total: {orderTotal}"</code></pre>
+
+    </div>
+</main>
+
+<script src="../js/nav.js"></script>
+<script src="../js/highlight.js"></script>
+</body>
+</html>

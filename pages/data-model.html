@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Model — SwiftRE Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Toggle navigation">&#9776;</button>
+
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <h1>SwiftRE Docs</h1>
+        <p>Rules Engine Reference</p>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li>
+                <a href="rule-language.html">Rule Language</a>
+                <ul>
+                    <li><a href="conditions.html">Conditions</a></li>
+                    <li><a href="actions.html">Actions</a></li>
+                    <li><a href="dates.html">Dates</a></li>
+                </ul>
+            </li>
+            <li><a href="data-model.html">Data Model</a></li>
+            <li><a href="execution.html">Execution Modes</a></li>
+            <li><a href="api-reference.html">API Reference</a></li>
+            <li><a href="integration.html">Form Integration</a></li>
+            <li><a href="playground.html">Playground</a></li>
+            <li><a href="examples.html">Examples</a></li>
+            <li><a href="deployment.html">Deployment</a></li>
+        </ul>
+    </nav>
+</aside>
+
+<main class="content">
+    <div class="content-inner">
+
+        <h1>Data Model</h1>
+        <p class="lead">SwiftRE evaluates rules against a <strong>working memory</strong> &mdash; a flat key-value store populated from the JSON facts you submit.</p>
+
+        <h2>Working Memory</h2>
+        <p>When you execute a ruleset, you provide a JSON object of facts. SwiftRE loads these into working memory, which is a flat dictionary of fact paths to typed values. Rules read from and (via SET actions) write to working memory.</p>
+        <pre><code>// Input JSON
+{
+  "firstName": "Jane",
+  "age": 28,
+  "email": "jane@example.com"
+}
+
+// Working memory (flat key-value pairs)
+firstName → "Jane"    (string)
+age       → 28        (integer)
+email     → "jane@example.com" (string)</code></pre>
+
+        <h2>JSON Flattening</h2>
+        <p>Nested JSON objects are flattened to dot-notation paths. This allows rules to reference deeply nested data using dotted field names:</p>
+        <pre><code>// Input JSON
+{
+  "customer": {
+    "name": "Jane",
+    "address": {
+      "city": "Springfield",
+      "zip": "62704"
+    }
+  }
+}
+
+// Working memory
+customer.name         → "Jane"
+customer.address.city → "Springfield"
+customer.address.zip  → "62704"</code></pre>
+        <p>In rules, use backtick-quoted field references for dotted paths:</p>
+        <pre><code class="language-swiftre">WHEN `customer.address.city` IS "Springfield"
+THEN INFO "Local customer detected"</code></pre>
+
+        <h2>Type System</h2>
+        <p>Each fact value has one of the following types:</p>
+        <table>
+            <thead>
+                <tr><th>Type</th><th>JSON Source</th><th>Example</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>string</td><td>JSON string</td><td><code>"hello"</code></td></tr>
+                <tr><td>integer</td><td>JSON number (no decimal)</td><td><code>42</code></td></tr>
+                <tr><td>double</td><td>JSON number (with decimal)</td><td><code>3.14</code></td></tr>
+                <tr><td>boolean</td><td>JSON boolean</td><td><code>true</code>, <code>false</code></td></tr>
+                <tr><td>date</td><td>ISO 8601 string (coerced)</td><td><code>"2025-06-15"</code></td></tr>
+                <tr><td>null</td><td>JSON null or missing key</td><td><code>null</code></td></tr>
+            </tbody>
+        </table>
+
+        <h3>Type Coercion</h3>
+        <ul style="margin-bottom: 1.5rem; padding-left: 1.5rem;">
+            <li><strong>Numeric:</strong> Integers and doubles are compared numerically across types. <code>42</code> (integer) equals <code>42.0</code> (double).</li>
+            <li><strong>String-to-date:</strong> When a string value is compared with a date operator (IS BEFORE, IS AFTER, etc.) or a date literal, SwiftRE automatically attempts ISO 8601 parsing.</li>
+        </ul>
+
+        <h2>Synonyms</h2>
+        <p>Synonyms map human-friendly names to canonical fact paths. This lets you write rules with readable field names even when the underlying data uses technical paths:</p>
+        <pre><code>// Synonym mapping
+"customer age"  → "customer.demographics.age"
+"zip code"      → "customer.address.zip"</code></pre>
+        <p>With synonyms configured, rules can use either form:</p>
+        <pre><code class="language-swiftre">WHEN `customer age` IS LESS THAN 18
+THEN ERROR "Must be 18 or older"</code></pre>
+        <p>Synonyms are managed per-ruleset via the API:</p>
+        <pre><code>PUT /api/v1/rulesets/my-rules/synonyms
+{
+  "synonyms": {
+    "customer age": "customer.demographics.age",
+    "zip code": "customer.address.zip"
+  }
+}</code></pre>
+
+        <h2>Facts in the Response</h2>
+        <p>The execution response includes a <code>facts</code> object containing the complete working memory state after execution. If SET actions modified values, the updated values appear here:</p>
+        <pre><code>{
+  "events": [...],
+  "facts": {
+    "status": "approved",
+    "reviewDate": "2025-07-15",
+    "originalStatus": "pending"
+  }
+}</code></pre>
+
+        <h2>Schema Validation</h2>
+        <p>You can optionally declare a data model schema for a ruleset. The schema defines expected field types and whether fields are required. Schema validation produces warnings (not errors) when rule text references unknown fields or uses fields inconsistently:</p>
+        <pre><code>PUT /api/v1/rulesets/my-rules/schema
+{
+  "fields": {
+    "age":   {"type": "integer", "required": true, "description": "Customer age"},
+    "email": {"type": "string",  "required": true, "description": "Contact email"},
+    "score": {"type": "double",  "required": false, "description": "Optional risk score"}
+  }
+}</code></pre>
+        <p>When validating rule text against a ruleset with a schema, the response may include <code>schemaWarnings</code> for fields not declared in the schema.</p>
+
+    </div>
+</main>
+
+<script src="../js/nav.js"></script>
+<script src="../js/highlight.js"></script>
+</body>
+</html>

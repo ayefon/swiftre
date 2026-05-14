@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playground — SwiftRE Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Toggle navigation">&#9776;</button>
+
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <h1>SwiftRE Docs</h1>
+        <p>Rules Engine Reference</p>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li>
+                <a href="rule-language.html">Rule Language</a>
+                <ul>
+                    <li><a href="conditions.html">Conditions</a></li>
+                    <li><a href="actions.html">Actions</a></li>
+                    <li><a href="dates.html">Dates</a></li>
+                </ul>
+            </li>
+            <li><a href="data-model.html">Data Model</a></li>
+            <li><a href="execution.html">Execution Modes</a></li>
+            <li><a href="api-reference.html">API Reference</a></li>
+            <li><a href="integration.html">Form Integration</a></li>
+            <li><a href="playground.html">Playground</a></li>
+            <li><a href="examples.html">Examples</a></li>
+            <li><a href="deployment.html">Deployment</a></li>
+        </ul>
+    </nav>
+</aside>
+
+<main class="content">
+    <div class="content-inner">
+
+        <h1>Playground</h1>
+        <p class="lead">Write rules and test them against sample data interactively. Requires a running SwiftRE server.</p>
+
+        <div class="callout warning">
+            <p><strong>Server required:</strong> The playground calls the SwiftRE API. Make sure the server is running at the URL configured below.</p>
+        </div>
+
+        <div class="playground-toolbar">
+            <label for="pg-server">Server URL:</label>
+            <input type="text" id="pg-server" value="http://localhost:8080" style="font-family: var(--font-mono); font-size: 0.8125rem; padding: 0.35rem 0.5rem; border: 1px solid var(--border); border-radius: 4px; width: 250px;">
+            <label for="pg-example" style="margin-left: 1rem;">Example:</label>
+            <select id="pg-example" style="padding: 0.35rem 0.5rem; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8125rem;">
+                <option value="contact">Contact Form</option>
+                <option value="order">Order Processing</option>
+                <option value="dates">Date Arithmetic</option>
+                <option value="custom">Custom</option>
+            </select>
+            <button class="btn btn-primary" onclick="playgroundRun()" style="margin-left: auto;">Run</button>
+        </div>
+
+        <div class="playground-container">
+            <div class="playground-pane">
+                <div class="playground-pane-header">Rules</div>
+                <textarea id="pg-rules" spellcheck="false">RULE "Email Required" PRIORITY 10
+WHEN email IS NOT SET
+THEN ERROR ON email "Email is required"
+
+RULE "Age Check"
+WHEN age IS SET AND age IS LESS THAN 18
+THEN ERROR ON age "Must be at least 18"
+
+RULE "Welcome"
+WHEN firstName IS SET
+THEN INFO "Welcome, {firstName}!"</textarea>
+            </div>
+            <div class="playground-pane">
+                <div class="playground-pane-header">Facts (JSON)</div>
+                <textarea id="pg-facts" spellcheck="false">{
+  "firstName": "Jane",
+  "age": 16,
+  "email": null
+}</textarea>
+            </div>
+        </div>
+
+        <div class="playground-toolbar" style="gap: 0.5rem;">
+            <label for="pg-mode">Mode:</label>
+            <select id="pg-mode" style="padding: 0.35rem 0.5rem; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8125rem;">
+                <option value="singlePass">Single Pass</option>
+                <option value="iterative">Iterative</option>
+            </select>
+            <label for="pg-max-iter" id="pg-max-iter-label" style="display: none; margin-left: 0.5rem;">Max iterations:</label>
+            <input type="number" id="pg-max-iter" value="10" min="1" max="100" style="display: none; width: 60px; padding: 0.35rem 0.5rem; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8125rem;">
+            <span id="pg-status" style="margin-left: auto; font-size: 0.8125rem; color: var(--body-secondary);"></span>
+        </div>
+
+        <h3 style="margin-top: 0.5rem;">Results</h3>
+        <div class="playground-results" id="pg-results">Click "Run" to execute the rules against the facts.</div>
+
+    </div>
+</main>
+
+<script src="../js/nav.js"></script>
+<script>
+var pgExamples = {
+    contact: {
+        rules: 'RULE "Email Required" PRIORITY 10\nWHEN email IS NOT SET\nTHEN ERROR ON email "Email is required"\n\nRULE "Age Check"\nWHEN age IS SET AND age IS LESS THAN 18\nTHEN ERROR ON age "Must be at least 18"\n\nRULE "Welcome"\nWHEN firstName IS SET\nTHEN INFO "Welcome, {firstName}!"',
+        facts: '{\n  "firstName": "Jane",\n  "age": 16,\n  "email": null\n}'
+    },
+    order: {
+        rules: 'RULE "Minimum Order" PRIORITY 20\nWHEN orderTotal IS SET AND orderTotal IS LESS THAN 10\nTHEN ERROR "Minimum order is $10"\n\nRULE "Bulk Discount" PRIORITY 10\nWHEN quantity IS SET AND quantity IS AT LEAST 100\nTHEN SET discount TO 15\n  AND INFO "Bulk discount: 15% off"\n\nRULE "Large Order"\nWHEN orderTotal IS GREATER THAN 5000\nTHEN WARNING "Large order - review required"',
+        facts: '{\n  "orderTotal": 7500,\n  "quantity": 150\n}'
+    },
+    dates: {
+        rules: 'RULE "Expired"\nWHEN expiryDate IS SET AND expiryDate IS BEFORE TODAY\nTHEN ERROR "Contract has expired"\n\nRULE "Expiring Soon"\nWHEN expiryDate IS SET\n  AND expiryDate IS ON OR AFTER TODAY\n  AND expiryDate IS BEFORE TODAY + 30 DAYS\nTHEN WARNING "Expires within 30 days"\n\nRULE "Duration"\nWHEN startDate IS SET AND endDate IS SET\nTHEN SET durationDays TO DAYS BETWEEN startDate AND endDate',
+        facts: '{\n  "startDate": "2025-01-01",\n  "endDate": "2025-07-15",\n  "expiryDate": "2025-07-15"\n}'
+    }
+};
+
+document.getElementById("pg-example").addEventListener("change", function () {
+    var ex = pgExamples[this.value];
+    if (ex) {
+        document.getElementById("pg-rules").value = ex.rules;
+        document.getElementById("pg-facts").value = ex.facts;
+    }
+});
+
+document.getElementById("pg-mode").addEventListener("change", function () {
+    var show = this.value === "iterative";
+    document.getElementById("pg-max-iter").style.display = show ? "inline" : "none";
+    document.getElementById("pg-max-iter-label").style.display = show ? "inline" : "none";
+});
+
+async function playgroundRun() {
+    var serverUrl = document.getElementById("pg-server").value.replace(/\/+$/, "");
+    var rulesText = document.getElementById("pg-rules").value;
+    var factsText = document.getElementById("pg-facts").value;
+    var resultsEl = document.getElementById("pg-results");
+    var statusEl = document.getElementById("pg-status");
+
+    var facts;
+    try {
+        facts = JSON.parse(factsText);
+    } catch (e) {
+        resultsEl.textContent = "Invalid JSON in facts: " + e.message;
+        return;
+    }
+
+    var modeSelect = document.getElementById("pg-mode").value;
+    var mode;
+    if (modeSelect === "iterative") {
+        mode = { iterative: parseInt(document.getElementById("pg-max-iter").value) || 10 };
+    } else {
+        mode = "singlePass";
+    }
+
+    statusEl.textContent = "Running...";
+    resultsEl.textContent = "";
+
+    var rulesetId = "playground-" + Date.now();
+
+    try {
+        var createResp = await fetch(serverUrl + "/api/v1/rulesets", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: rulesetId, ruleText: rulesText })
+        });
+
+        if (!createResp.ok) {
+            var err = await createResp.json();
+            resultsEl.textContent = "Rule parse error:\n" + (err.reason || JSON.stringify(err, null, 2));
+            statusEl.textContent = "Error";
+            return;
+        }
+
+        var execResp = await fetch(serverUrl + "/api/v1/rulesets/" + rulesetId + "/execute", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ facts: facts, mode: mode })
+        });
+
+        var result = await execResp.json();
+        resultsEl.textContent = JSON.stringify(result, null, 2);
+        statusEl.textContent = "Done — " + (result.summary ? result.summary.total + " events" : "") +
+            (result.iterations ? ", " + result.iterations + " iteration(s)" : "");
+
+        fetch(serverUrl + "/api/v1/rulesets/" + rulesetId, { method: "DELETE" });
+
+    } catch (e) {
+        resultsEl.textContent = "Connection error: " + e.message +
+            "\n\nMake sure the SwiftRE server is running at " + serverUrl;
+        statusEl.textContent = "Connection failed";
+    }
+}
+</script>
+</body>
+</html>

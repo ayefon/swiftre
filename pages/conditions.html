@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conditions — SwiftRE Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Toggle navigation">&#9776;</button>
+
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <h1>SwiftRE Docs</h1>
+        <p>Rules Engine Reference</p>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li>
+                <a href="rule-language.html">Rule Language</a>
+                <ul>
+                    <li><a href="conditions.html">Conditions</a></li>
+                    <li><a href="actions.html">Actions</a></li>
+                    <li><a href="dates.html">Dates</a></li>
+                </ul>
+            </li>
+            <li><a href="data-model.html">Data Model</a></li>
+            <li><a href="execution.html">Execution Modes</a></li>
+            <li><a href="api-reference.html">API Reference</a></li>
+            <li><a href="integration.html">Form Integration</a></li>
+            <li><a href="playground.html">Playground</a></li>
+            <li><a href="examples.html">Examples</a></li>
+            <li><a href="deployment.html">Deployment</a></li>
+        </ul>
+    </nav>
+</aside>
+
+<main class="content">
+    <div class="content-inner">
+
+        <h1>Conditions</h1>
+        <p class="lead">Conditions define when a rule fires. They compare field values against literals, check field presence, and can be combined with logical operators.</p>
+
+        <h2>Equality</h2>
+        <table>
+            <thead>
+                <tr><th>Operator</th><th>Example</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>IS</code></td><td><code class="language-swiftre">WHEN status IS "active"</code></td></tr>
+                <tr><td><code>IS NOT</code></td><td><code class="language-swiftre">WHEN status IS NOT "blocked"</code></td></tr>
+            </tbody>
+        </table>
+
+        <h2>Numeric Comparisons</h2>
+        <table>
+            <thead>
+                <tr><th>Operator</th><th>Example</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>IS GREATER THAN</code></td><td><code class="language-swiftre">WHEN age IS GREATER THAN 18</code></td></tr>
+                <tr><td><code>IS GREATER THAN OR EQUAL TO</code></td><td><code class="language-swiftre">WHEN score IS GREATER THAN OR EQUAL TO 90</code></td></tr>
+                <tr><td><code>IS LESS THAN</code></td><td><code class="language-swiftre">WHEN quantity IS LESS THAN 1</code></td></tr>
+                <tr><td><code>IS LESS THAN OR EQUAL TO</code></td><td><code class="language-swiftre">WHEN balance IS LESS THAN OR EQUAL TO 0</code></td></tr>
+                <tr><td><code>IS AT LEAST</code></td><td><code class="language-swiftre">WHEN orderTotal IS AT LEAST 50</code></td></tr>
+                <tr><td><code>IS AT MOST</code></td><td><code class="language-swiftre">WHEN retries IS AT MOST 3</code></td></tr>
+                <tr><td><code>IS EQUAL TO</code></td><td><code class="language-swiftre">WHEN count IS EQUAL TO 0</code></td></tr>
+            </tbody>
+        </table>
+        <div class="callout tip">
+            <p><strong>Cross-type comparison:</strong> Integers and doubles are compared numerically. <code>WHEN count IS GREATER THAN 2.5</code> works even if <code>count</code> is an integer.</p>
+        </div>
+
+        <h2>String Operators</h2>
+        <table>
+            <thead>
+                <tr><th>Operator</th><th>Example</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>CONTAINS</code></td><td><code class="language-swiftre">WHEN email CONTAINS "@"</code></td></tr>
+                <tr><td><code>STARTS WITH</code></td><td><code class="language-swiftre">WHEN phone STARTS WITH "+1"</code></td></tr>
+                <tr><td><code>ENDS WITH</code></td><td><code class="language-swiftre">WHEN filename ENDS WITH ".pdf"</code></td></tr>
+                <tr><td><code>MATCHES</code></td><td><code class="language-swiftre">WHEN zipCode MATCHES "^[0-9]{5}$"</code></td></tr>
+            </tbody>
+        </table>
+
+        <h3>Case Sensitivity</h3>
+        <p>String comparisons are case-sensitive by default. Add <code>IGNORING CASE</code> to make them case-insensitive:</p>
+        <pre><code class="language-swiftre">WHEN department CONTAINS "engineering" IGNORING CASE
+WHEN country IS "usa" IGNORING CASE</code></pre>
+
+        <h2>Presence Checks</h2>
+        <table>
+            <thead>
+                <tr><th>Operator</th><th>Example</th><th>True when</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>IS SET</code></td><td><code class="language-swiftre">WHEN email IS SET</code></td><td>Field exists and is not null</td></tr>
+                <tr><td><code>IS NOT SET</code></td><td><code class="language-swiftre">WHEN phone IS NOT SET</code></td><td>Field is missing or null</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Date Comparisons</h2>
+        <table>
+            <thead>
+                <tr><th>Operator</th><th>Example</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>IS BEFORE</code></td><td><code class="language-swiftre">WHEN expiryDate IS BEFORE TODAY</code></td></tr>
+                <tr><td><code>IS AFTER</code></td><td><code class="language-swiftre">WHEN startDate IS AFTER DATE "2025-01-01"</code></td></tr>
+                <tr><td><code>IS ON OR BEFORE</code></td><td><code class="language-swiftre">WHEN deadline IS ON OR BEFORE TOMORROW</code></td></tr>
+                <tr><td><code>IS ON OR AFTER</code></td><td><code class="language-swiftre">WHEN hireDate IS ON OR AFTER 30 DAYS AGO</code></td></tr>
+            </tbody>
+        </table>
+        <p>See <a href="dates.html">Dates</a> for date arithmetic and difference expressions in conditions.</p>
+
+        <h2>Logical Combinators</h2>
+        <p>Combine multiple conditions with <code>AND</code>, <code>OR</code>, and <code>NOT</code>. Use parentheses for grouping:</p>
+
+        <h3>AND</h3>
+        <pre><code class="language-swiftre">WHEN age IS SET AND age IS GREATER THAN 18</code></pre>
+
+        <h3>OR</h3>
+        <pre><code class="language-swiftre">WHEN status IS "expired" OR status IS "cancelled"</code></pre>
+
+        <h3>NOT</h3>
+        <pre><code class="language-swiftre">WHEN NOT (status IS "active")</code></pre>
+
+        <h3>Grouping with Parentheses</h3>
+        <pre><code class="language-swiftre">WHEN (status IS "active" OR status IS "pending")
+  AND age IS GREATER THAN 18</code></pre>
+
+        <h2>Date Difference in Conditions</h2>
+        <p>Compute the span between two dates and compare the result as an integer:</p>
+        <pre><code class="language-swiftre">WHEN DAYS BETWEEN startDate AND endDate IS GREATER THAN 14
+WHEN MONTHS BETWEEN hireDate AND TODAY IS AT LEAST 6
+WHEN YEARS BETWEEN birthDate AND TODAY IS LESS THAN 18</code></pre>
+        <p>See <a href="dates.html">Dates</a> for full date difference documentation.</p>
+
+        <h2>Date Arithmetic in Conditions</h2>
+        <p>Add or subtract durations from dates or fields:</p>
+        <pre><code class="language-swiftre">WHEN expiryDate IS BEFORE TODAY + 30 DAYS
+WHEN `contract.start` IS AFTER 6 MONTHS AGO</code></pre>
+
+    </div>
+</main>
+
+<script src="../js/nav.js"></script>
+<script src="../js/highlight.js"></script>
+</body>
+</html>

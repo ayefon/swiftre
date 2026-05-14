@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Examples — SwiftRE Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Toggle navigation">&#9776;</button>
+
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <h1>SwiftRE Docs</h1>
+        <p>Rules Engine Reference</p>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li>
+                <a href="rule-language.html">Rule Language</a>
+                <ul>
+                    <li><a href="conditions.html">Conditions</a></li>
+                    <li><a href="actions.html">Actions</a></li>
+                    <li><a href="dates.html">Dates</a></li>
+                </ul>
+            </li>
+            <li><a href="data-model.html">Data Model</a></li>
+            <li><a href="execution.html">Execution Modes</a></li>
+            <li><a href="api-reference.html">API Reference</a></li>
+            <li><a href="integration.html">Form Integration</a></li>
+            <li><a href="playground.html">Playground</a></li>
+            <li><a href="examples.html">Examples</a></li>
+            <li><a href="deployment.html">Deployment</a></li>
+        </ul>
+    </nav>
+</aside>
+
+<main class="content">
+    <div class="content-inner">
+
+        <h1>Examples</h1>
+        <p class="lead">Real-world rulesets you can copy, modify, and use as starting points.</p>
+
+        <!-- EXAMPLE 1 -->
+        <h2>1. Contact Form Validation</h2>
+        <p>A typical form validation ruleset covering required fields, email format, and age restrictions.</p>
+
+        <h3>Rules</h3>
+        <pre><code class="language-swiftre">RULE "First Name Required" PRIORITY 10
+WHEN firstName IS NOT SET
+THEN ERROR ON firstName "First name is required"
+
+RULE "Last Name Required" PRIORITY 10
+WHEN lastName IS NOT SET
+THEN ERROR ON lastName "Last name is required"
+
+RULE "Email Required" PRIORITY 10
+WHEN email IS NOT SET
+THEN ERROR ON email "Email address is required"
+
+RULE "Email Format"
+WHEN email IS SET AND email MATCHES "^[^@]+@[^@]+\\.[^@]+$" IS NOT true
+THEN ERROR ON email "Please enter a valid email address"
+
+RULE "Age Required" PRIORITY 10
+WHEN age IS NOT SET
+THEN ERROR ON age "Age is required"
+
+RULE "Age Minimum"
+WHEN age IS SET AND age IS LESS THAN 18
+THEN ERROR ON age "You must be at least 18 years old"
+
+RULE "Age Warning"
+WHEN age IS SET AND age IS GREATER THAN 120
+THEN WARNING ON age "Please verify this age"
+
+RULE "Welcome"
+WHEN firstName IS SET
+THEN INFO "Welcome, {firstName}!"</code></pre>
+
+        <h3>Sample Facts</h3>
+        <pre><code>{
+  "firstName": "Jane",
+  "lastName": null,
+  "email": "not-an-email",
+  "age": 16
+}</code></pre>
+
+        <h3>Expected Output</h3>
+        <pre><code>{
+  "events": [
+    {"kind": "error", "ruleName": "Last Name Required",
+     "field": "lastName", "message": "Last name is required"},
+    {"kind": "error", "ruleName": "Email Format",
+     "field": "email", "message": "Please enter a valid email address"},
+    {"kind": "error", "ruleName": "Age Minimum",
+     "field": "age", "message": "You must be at least 18 years old"},
+    {"kind": "info", "ruleName": "Welcome",
+     "message": "Welcome, Jane!"}
+  ],
+  "summary": {"errors": 3, "warnings": 0, "infos": 1, "total": 4}
+}</code></pre>
+
+        <!-- EXAMPLE 2 -->
+        <h2>2. Order Processing</h2>
+        <p>Discount rules, minimum order enforcement, and date-based promotions.</p>
+
+        <h3>Rules</h3>
+        <pre><code class="language-swiftre">RULE "Minimum Order" PRIORITY 20
+WHEN orderTotal IS SET AND orderTotal IS LESS THAN 10
+THEN ERROR "Minimum order amount is $10"
+
+RULE "Bulk Discount" PRIORITY 10
+WHEN quantity IS SET AND quantity IS AT LEAST 100
+THEN INFO "Bulk discount applied: 15% off"
+  AND SET discount TO 15
+
+RULE "Holiday Promo"
+WHEN orderDate IS SET
+  AND orderDate IS ON OR AFTER DATE "2025-12-20"
+  AND orderDate IS ON OR BEFORE DATE "2025-12-31"
+THEN INFO "Holiday promotion: free shipping!"
+  AND SET freeShipping TO true
+
+RULE "Large Order Alert"
+WHEN orderTotal IS SET AND orderTotal IS GREATER THAN 5000
+THEN WARNING "Large order — manager approval may be required"
+  AND SIGNAL AN EVENT OF TYPE approvalRequired
+    WITH A PAYLOAD OF "Order total: {orderTotal}"</code></pre>
+
+        <h3>Sample Facts</h3>
+        <pre><code>{
+  "orderTotal": 7500,
+  "quantity": 150,
+  "orderDate": "2025-12-25"
+}</code></pre>
+
+        <h3>Expected Output</h3>
+        <pre><code>{
+  "events": [
+    {"kind": "info", "ruleName": "Bulk Discount",
+     "message": "Bulk discount applied: 15% off"},
+    {"kind": "info", "ruleName": "Holiday Promo",
+     "message": "Holiday promotion: free shipping!"},
+    {"kind": "warning", "ruleName": "Large Order Alert",
+     "message": "Large order — manager approval may be required"},
+    {"kind": "signal", "ruleName": "Large Order Alert",
+     "message": "Order total: 7500",
+     "payload": {"type": "approvalRequired"}}
+  ],
+  "facts": {
+    "orderTotal": 7500, "quantity": 150,
+    "orderDate": "2025-12-25",
+    "discount": 15, "freeShipping": true
+  },
+  "summary": {"errors": 0, "warnings": 1, "infos": 2, "modifications": 2, "total": 5}
+}</code></pre>
+
+        <!-- EXAMPLE 3 -->
+        <h2>3. Contract Management</h2>
+        <p>Date arithmetic for expiry warnings and renewal calculations.</p>
+
+        <h3>Rules</h3>
+        <pre><code class="language-swiftre">RULE "Expired Contract" PRIORITY 20
+WHEN `contract.endDate` IS SET
+  AND `contract.endDate` IS BEFORE TODAY
+THEN ERROR "Contract has expired"
+  AND SET `contract.status` TO "expired"
+
+RULE "Expiring Soon" PRIORITY 15
+WHEN `contract.endDate` IS SET
+  AND `contract.endDate` IS ON OR AFTER TODAY
+  AND `contract.endDate` IS BEFORE TODAY + 30 DAYS
+THEN WARNING "Contract expires within 30 days"
+
+RULE "Calculate Duration"
+WHEN `contract.startDate` IS SET AND `contract.endDate` IS SET
+THEN SET `contract.durationDays` TO DAYS BETWEEN `contract.startDate` AND `contract.endDate`
+
+RULE "Set Renewal Date"
+WHEN `contract.startDate` IS SET
+THEN SET `contract.renewalDate` TO `contract.startDate` + 1 YEAR
+
+RULE "Long Contract"
+WHEN `contract.durationDays` IS SET
+  AND `contract.durationDays` IS GREATER THAN 365
+THEN INFO "This is a multi-year contract"</code></pre>
+
+        <h3>Sample Facts</h3>
+        <pre><code>{
+  "contract": {
+    "startDate": "2024-01-15",
+    "endDate": "2025-06-01",
+    "status": "active"
+  }
+}</code></pre>
+
+        <p><strong>Explanation:</strong> This ruleset uses iterative mode (<code>{"iterative": 5}</code>) because "Calculate Duration" sets <code>contract.durationDays</code>, which "Long Contract" depends on. The engine evaluates "Calculate Duration" first, then re-evaluates to fire "Long Contract" with the newly computed duration.</p>
+
+        <!-- EXAMPLE 4 -->
+        <h2>4. Multi-step Workflow</h2>
+        <p>Iterative mode with SET chaining and signal events for external triggers.</p>
+
+        <h3>Rules</h3>
+        <pre><code class="language-swiftre">RULE "Initial Review" PRIORITY 30
+WHEN status IS "submitted" AND reviewer IS NOT SET
+THEN SET status TO "needsReview"
+  AND WARNING "No reviewer assigned"
+
+RULE "Auto-approve Small"  PRIORITY 20
+WHEN status IS "needsReview" AND amount IS SET AND amount IS LESS THAN 100
+THEN SET status TO "approved"
+  AND INFO "Auto-approved (under $100)"
+
+RULE "Escalate Large" PRIORITY 20
+WHEN status IS "needsReview" AND amount IS SET AND amount IS AT LEAST 100
+THEN SET status TO "escalated"
+  AND SIGNAL AN EVENT OF TYPE escalation
+    WITH A PAYLOAD OF "Amount {amount} requires manager review"
+
+RULE "Notify Approved" PRIORITY 10
+WHEN status IS "approved"
+THEN SIGNAL AN EVENT OF TYPE notification
+  WITH A PAYLOAD OF "Request approved - notify requester"
+
+RULE "Notify Escalated" PRIORITY 10
+WHEN status IS "escalated"
+THEN SIGNAL AN EVENT OF TYPE notification
+  WITH A PAYLOAD OF "Request escalated - notify manager"</code></pre>
+
+        <h3>Sample Facts</h3>
+        <pre><code>{
+  "status": "submitted",
+  "amount": 50
+}</code></pre>
+        <p>Execute with <code>{"iterative": 5}</code>.</p>
+
+        <h3>Expected Flow</h3>
+        <ol class="steps">
+            <li>
+                <strong>Iteration 1:</strong> "Initial Review" fires, sets <code>status</code> to <code>"needsReview"</code>.
+            </li>
+            <li>
+                <strong>Iteration 2:</strong> "Auto-approve Small" fires (amount 50 &lt; 100), sets <code>status</code> to <code>"approved"</code>.
+            </li>
+            <li>
+                <strong>Iteration 3:</strong> "Notify Approved" fires, emitting a notification signal. No more changes &mdash; quiescence reached.
+            </li>
+        </ol>
+        <p>Final <code>status</code> in facts: <code>"approved"</code>. Three iterations, termination reason: <code>"complete"</code>.</p>
+
+        <div class="callout">
+            <p><strong>Note:</strong> Signal events are not displayed in form validation UIs. They appear in the API response for your application to handle &mdash; sending emails, posting to Slack, updating a CRM, etc.</p>
+        </div>
+
+    </div>
+</main>
+
+<script src="../js/nav.js"></script>
+<script src="../js/highlight.js"></script>
+</body>
+</html>

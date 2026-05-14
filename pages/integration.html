@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Integration — SwiftRE Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Toggle navigation">&#9776;</button>
+
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <h1>SwiftRE Docs</h1>
+        <p>Rules Engine Reference</p>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li>
+                <a href="rule-language.html">Rule Language</a>
+                <ul>
+                    <li><a href="conditions.html">Conditions</a></li>
+                    <li><a href="actions.html">Actions</a></li>
+                    <li><a href="dates.html">Dates</a></li>
+                </ul>
+            </li>
+            <li><a href="data-model.html">Data Model</a></li>
+            <li><a href="execution.html">Execution Modes</a></li>
+            <li><a href="api-reference.html">API Reference</a></li>
+            <li><a href="integration.html">Form Integration</a></li>
+            <li><a href="playground.html">Playground</a></li>
+            <li><a href="examples.html">Examples</a></li>
+            <li><a href="deployment.html">Deployment</a></li>
+        </ul>
+    </nav>
+</aside>
+
+<main class="content">
+    <div class="content-inner">
+
+        <h1>Form Integration</h1>
+        <p class="lead"><code>swiftre-validate.js</code> connects HTML forms to the SwiftRE API for live, progressive validation with field highlighting.</p>
+
+        <h2>Overview</h2>
+        <p>The validation script provides a bridge between standard HTML forms and the SwiftRE execution API. When a user interacts with form fields, the script:</p>
+        <ol style="margin-bottom: 1.5rem; padding-left: 1.5rem;">
+            <li>Tracks which fields the user has touched ("dirty" fields)</li>
+            <li>Debounces rapid changes (500ms delay) to avoid excessive API calls</li>
+            <li>Collects all form values as JSON facts</li>
+            <li>Executes the selected ruleset via the API</li>
+            <li>Displays only events relevant to dirty fields</li>
+            <li>Highlights specific fields with error/warning/info styling</li>
+        </ol>
+
+        <h2>Required HTML Elements</h2>
+        <p>The script expects these elements on the page:</p>
+        <table>
+            <thead>
+                <tr><th>Element</th><th>Purpose</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>&lt;form id="form"&gt;</code></td><td>The form to validate. Field <code>name</code> attributes become fact paths.</td></tr>
+                <tr><td><code>&lt;select id="ruleset-selector"&gt;</code></td><td>Dropdown populated with available rulesets from the API.</td></tr>
+                <tr><td><code>&lt;div id="messages"&gt;</code></td><td>Container where validation messages are rendered.</td></tr>
+                <tr><td><code>&lt;div id="status"&gt;</code></td><td>Status indicator (shows API connection state).</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Adding to Your Page</h2>
+        <pre><code>&lt;!-- Configuration --&gt;
+&lt;script&gt;
+  var swiftreUrl = "http://localhost:8080/api/v1";
+  var swiftreRulesetId = null; // auto-select from dropdown
+&lt;/script&gt;
+
+&lt;!-- Validation panel --&gt;
+&lt;div id="status"&gt;&lt;/div&gt;
+&lt;select id="ruleset-selector"&gt;&lt;/select&gt;
+&lt;div id="messages"&gt;&lt;/div&gt;
+&lt;button type="button" onclick="SwiftREValidation.validateAll()"&gt;
+  Validate All
+&lt;/button&gt;
+
+&lt;!-- The script --&gt;
+&lt;script src="swiftre-validate.js"&gt;&lt;/script&gt;</code></pre>
+
+        <h2>Fact Collection</h2>
+        <p>The script iterates over all <code>&lt;input&gt;</code>, <code>&lt;select&gt;</code>, and <code>&lt;textarea&gt;</code> elements in the form. Each element's <code>name</code> attribute becomes a fact path, and the value is coerced:</p>
+        <table>
+            <thead>
+                <tr><th>Input Type</th><th>Coercion</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Empty string</td><td><code>null</code></td></tr>
+                <tr><td>Checkbox</td><td><code>true</code> / <code>false</code></td></tr>
+                <tr><td>Numeric string</td><td>Number (integer or float)</td></tr>
+                <tr><td>Other</td><td>String as-is</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Progressive Validation</h2>
+        <p>The script uses a progressive validation approach to avoid overwhelming the user with messages for untouched fields:</p>
+
+        <h3>Dirty-Field Tracking</h3>
+        <p>A field becomes "dirty" when the user interacts with it (changes its value). Only events relevant to dirty fields are displayed. This means a form with 10 empty required fields won't show 10 error messages until the user has actually visited those fields.</p>
+
+        <h3>Debounce</h3>
+        <p>After each field change, validation is delayed by 500ms. If the user changes another field within that window, the timer resets. This prevents rapid-fire API calls while typing or tabbing through fields.</p>
+
+        <h3>Validate All</h3>
+        <p>The "Validate All" button (calling <code>SwiftREValidation.validateAll()</code>) marks every field as dirty and runs validation immediately. This is useful as a final check before form submission.</p>
+
+        <h2>Field Highlighting</h2>
+        <p>When events are rendered, the script attempts to highlight the corresponding form field:</p>
+        <ol style="margin-bottom: 1.5rem; padding-left: 1.5rem;">
+            <li><strong>Explicit targeting:</strong> If the event has a <code>field</code> property (from <code>ERROR ON field</code> syntax), that field is highlighted directly.</li>
+            <li><strong>Message heuristic:</strong> If no explicit field is set, the script checks if the event message mentions any dirty field's name or value.</li>
+        </ol>
+
+        <div class="callout tip">
+            <p><strong>Best practice:</strong> Use the <code>ON field</code> syntax in your rules for reliable field highlighting. The message heuristic is a fallback for simpler rules where the field name appears in the message text.</p>
+        </div>
+
+        <h2>Event Filtering</h2>
+        <p>Only <code>error</code>, <code>warning</code>, and <code>info</code> events are displayed. Other event kinds (<code>dataModification</code>, <code>signal</code>, etc.) are filtered out of the UI but remain in the API response for programmatic use.</p>
+
+        <h2>Customization</h2>
+        <table>
+            <thead>
+                <tr><th>Setting</th><th>How to Change</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>API URL</td><td>Set <code>swiftreUrl</code> before loading the script</td></tr>
+                <tr><td>Fixed ruleset</td><td>Set <code>swiftreRulesetId</code> to skip the dropdown</td></tr>
+                <tr><td>Debounce delay</td><td>Modify <code>SwiftREValidation._debounceMs</code></td></tr>
+                <tr><td>CSS classes</td><td>Override <code>.field-error</code>, <code>.field-warning</code>, <code>.field-info</code> styles</td></tr>
+            </tbody>
+        </table>
+
+    </div>
+</main>
+
+<script src="../js/nav.js"></script>
+<script src="../js/highlight.js"></script>
+</body>
+</html>

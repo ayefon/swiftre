@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deployment — SwiftRE Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Toggle navigation">&#9776;</button>
+
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <h1>SwiftRE Docs</h1>
+        <p>Rules Engine Reference</p>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li>
+                <a href="rule-language.html">Rule Language</a>
+                <ul>
+                    <li><a href="conditions.html">Conditions</a></li>
+                    <li><a href="actions.html">Actions</a></li>
+                    <li><a href="dates.html">Dates</a></li>
+                </ul>
+            </li>
+            <li><a href="data-model.html">Data Model</a></li>
+            <li><a href="execution.html">Execution Modes</a></li>
+            <li><a href="api-reference.html">API Reference</a></li>
+            <li><a href="integration.html">Form Integration</a></li>
+            <li><a href="playground.html">Playground</a></li>
+            <li><a href="examples.html">Examples</a></li>
+            <li><a href="deployment.html">Deployment</a></li>
+        </ul>
+    </nav>
+</aside>
+
+<main class="content">
+    <div class="content-inner">
+
+        <h1>Deployment</h1>
+        <p class="lead">Run SwiftRE as a Docker container or build from source.</p>
+
+        <h2>Docker Image</h2>
+        <p>Build the image from the project root:</p>
+        <pre><code>docker build -t swiftre .</code></pre>
+        <p>Run it:</p>
+        <pre><code>docker run -p 8080:8080 swiftre</code></pre>
+        <p>The API is now available at <code>http://localhost:8080</code>.</p>
+
+        <h2>Docker Compose</h2>
+        <p>For persistent storage and easier management, use Docker Compose:</p>
+        <pre><code>docker compose up -d</code></pre>
+        <p>The <code>docker-compose.yml</code>:</p>
+        <pre><code>services:
+  swiftre:
+    build: .
+    image: swiftre
+    ports:
+      - "8080:8080"
+    volumes:
+      - swiftre-data:/app/data
+    environment:
+      - SWIFTRE_DATA_DIR=/app/data/rulesets
+
+volumes:
+  swiftre-data:</code></pre>
+
+        <h3>Persistent Storage</h3>
+        <p>The <code>swiftre-data</code> volume persists rulesets across container restarts. Without a volume, rulesets are stored in memory and lost when the container stops.</p>
+
+        <h2>Environment Variables</h2>
+        <table>
+            <thead>
+                <tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>SWIFTRE_DATA_DIR</code></td><td>(none)</td><td>Directory for persistent ruleset storage. If unset, rulesets are in-memory only.</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Building from Source</h2>
+        <p>Requires Swift 6.0+ toolchain:</p>
+        <pre><code>swift build -c release
+swift run SwiftREServer serve</code></pre>
+        <p>The server binds to <code>0.0.0.0:8080</code> by default. Override with Vapor's command-line options:</p>
+        <pre><code>swift run SwiftREServer serve --hostname 127.0.0.1 --port 9090</code></pre>
+
+        <h2>Accessing the Server</h2>
+        <table>
+            <thead>
+                <tr><th>URL</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>/api/v1/rulesets</code></td><td>REST API (see <a href="api-reference.html">API Reference</a>)</td></tr>
+                <tr><td><code>/swagger</code></td><td>Swagger UI for interactive API exploration</td></tr>
+                <tr><td><code>/editor</code></td><td>Web-based ruleset editor</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Production Considerations</h2>
+
+        <h3>Reverse Proxy</h3>
+        <p>In production, place a reverse proxy (nginx, Caddy, etc.) in front of SwiftRE for TLS termination, rate limiting, and access control. SwiftRE itself does not provide authentication.</p>
+
+        <h3>CORS</h3>
+        <p>If your frontend is served from a different origin than the API, you'll need to configure CORS headers. This can be done at the reverse proxy level.</p>
+
+        <h3>Persistent Rulesets</h3>
+        <p>Always use a Docker volume or the <code>SWIFTRE_DATA_DIR</code> environment variable in production. Without persistent storage, all rulesets are lost on container restart.</p>
+
+        <div class="callout warning">
+            <p><strong>No authentication:</strong> SwiftRE does not include authentication or authorization. Anyone who can reach the API can create, modify, and delete rulesets. Protect the API with a reverse proxy or network-level access controls in production.</p>
+        </div>
+
+    </div>
+</main>
+
+<script src="../js/nav.js"></script>
+<script src="../js/highlight.js"></script>
+</body>
+</html>

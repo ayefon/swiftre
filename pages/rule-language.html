@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rule Language — SwiftRE Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Toggle navigation">&#9776;</button>
+
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <h1>SwiftRE Docs</h1>
+        <p>Rules Engine Reference</p>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li>
+                <a href="rule-language.html">Rule Language</a>
+                <ul>
+                    <li><a href="conditions.html">Conditions</a></li>
+                    <li><a href="actions.html">Actions</a></li>
+                    <li><a href="dates.html">Dates</a></li>
+                </ul>
+            </li>
+            <li><a href="data-model.html">Data Model</a></li>
+            <li><a href="execution.html">Execution Modes</a></li>
+            <li><a href="api-reference.html">API Reference</a></li>
+            <li><a href="integration.html">Form Integration</a></li>
+            <li><a href="playground.html">Playground</a></li>
+            <li><a href="examples.html">Examples</a></li>
+            <li><a href="deployment.html">Deployment</a></li>
+        </ul>
+    </nav>
+</aside>
+
+<main class="content">
+    <div class="content-inner">
+
+        <h1>Rule Language Reference</h1>
+        <p class="lead">SwiftRE rules are written in an English-like language. Each rule has a name, an optional priority, a condition (WHEN), and one or more actions (THEN).</p>
+
+        <h2>Rule Structure</h2>
+        <pre><code class="language-swiftre">RULE "Rule Name" [PRIORITY N]
+WHEN &lt;condition&gt;
+THEN &lt;action&gt; [AND &lt;action&gt;]*</code></pre>
+
+        <table>
+            <thead>
+                <tr><th>Part</th><th>Required</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>RULE "name"</code></td><td>Yes</td><td>Unique name in double quotes. Used in event output to identify which rule fired.</td></tr>
+                <tr><td><code>PRIORITY N</code></td><td>No</td><td>Integer priority. Higher values evaluate first. Default is 0.</td></tr>
+                <tr><td><code>WHEN</code></td><td>Yes</td><td>The condition that must be true for the rule to fire.</td></tr>
+                <tr><td><code>THEN</code></td><td>Yes</td><td>One or more actions, separated by <code>AND</code>.</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Priority and Evaluation Order</h2>
+        <p>Rules are evaluated in descending priority order. Rules with the same priority are evaluated in the order they appear in the ruleset. In iterative mode, priority determines which rules re-fire first when facts change.</p>
+        <pre><code class="language-swiftre">RULE "Critical Check" PRIORITY 100
+WHEN status IS "blocked"
+THEN ERROR "Processing is blocked"
+
+RULE "Standard Check"
+WHEN status IS "pending"
+THEN INFO "Awaiting review"</code></pre>
+
+        <h2>Field References</h2>
+        <p>Fields refer to values in the working memory (the JSON facts you submit). There are two ways to reference a field:</p>
+
+        <h3>Bare identifiers</h3>
+        <p>Single-word field names can be used directly:</p>
+        <pre><code class="language-swiftre">WHEN age IS GREATER THAN 18
+WHEN status IS "active"</code></pre>
+
+        <h3>Dotted paths</h3>
+        <p>Nested JSON objects are flattened to dot-notation. Use backticks for paths with dots or spaces:</p>
+        <pre><code class="language-swiftre">WHEN `address.city` IS "Springfield"
+WHEN `customer.email` IS NOT SET</code></pre>
+
+        <div class="callout">
+            <p><strong>Tip:</strong> Backtick-quoted fields can contain any characters, including spaces and special characters. Use them whenever the field name is more than a single word.</p>
+        </div>
+
+        <h2>Values</h2>
+        <table>
+            <thead>
+                <tr><th>Type</th><th>Syntax</th><th>Examples</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>String</td><td>Double-quoted</td><td><code>"active"</code>, <code>"Springfield"</code></td></tr>
+                <tr><td>Integer</td><td>Bare number</td><td><code>18</code>, <code>0</code>, <code>-5</code></td></tr>
+                <tr><td>Decimal</td><td>Bare number with dot</td><td><code>3.14</code>, <code>99.99</code></td></tr>
+                <tr><td>Boolean</td><td>Bare keyword</td><td><code>true</code>, <code>false</code></td></tr>
+                <tr><td>Null</td><td>Bare keyword</td><td><code>null</code></td></tr>
+                <tr><td>Date</td><td>DATE literal or reference</td><td><code>DATE "2025-06-15"</code>, <code>TODAY</code></td></tr>
+            </tbody>
+        </table>
+
+        <h2>Detailed References</h2>
+        <p>The rule language is covered in depth across these sub-pages:</p>
+        <div class="card-grid">
+            <a class="card" href="conditions.html">
+                <h3>Conditions</h3>
+                <p>Comparison operators, logical combinators, presence checks, and date comparisons.</p>
+            </a>
+            <a class="card" href="actions.html">
+                <h3>Actions</h3>
+                <p>ERROR, WARNING, INFO, SET, SIGNAL &mdash; with field targeting and interpolation.</p>
+            </a>
+            <a class="card" href="dates.html">
+                <h3>Dates</h3>
+                <p>Date literals, references, arithmetic, and difference expressions.</p>
+            </a>
+        </div>
+
+    </div>
+</main>
+
+<script src="../js/nav.js"></script>
+<script src="../js/highlight.js"></script>
+</body>
+</html>

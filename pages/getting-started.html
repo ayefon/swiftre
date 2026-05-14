@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Getting Started — SwiftRE Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Toggle navigation">&#9776;</button>
+
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <h1>SwiftRE Docs</h1>
+        <p>Rules Engine Reference</p>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li>
+                <a href="rule-language.html">Rule Language</a>
+                <ul>
+                    <li><a href="conditions.html">Conditions</a></li>
+                    <li><a href="actions.html">Actions</a></li>
+                    <li><a href="dates.html">Dates</a></li>
+                </ul>
+            </li>
+            <li><a href="data-model.html">Data Model</a></li>
+            <li><a href="execution.html">Execution Modes</a></li>
+            <li><a href="api-reference.html">API Reference</a></li>
+            <li><a href="integration.html">Form Integration</a></li>
+            <li><a href="playground.html">Playground</a></li>
+            <li><a href="examples.html">Examples</a></li>
+            <li><a href="deployment.html">Deployment</a></li>
+        </ul>
+    </nav>
+</aside>
+
+<main class="content">
+    <div class="content-inner">
+
+        <h1>Getting Started</h1>
+        <p class="lead">Get SwiftRE running and execute your first ruleset in three steps.</p>
+
+        <h2>What is SwiftRE?</h2>
+        <p>SwiftRE is a lightweight business rules engine. You write rules in an English-like language, submit data as JSON, and get back structured events &mdash; errors, warnings, information messages, and custom signals. It's designed for form validation with immediate feedback, but works for any scenario where you need to externalize business logic from application code.</p>
+
+        <h2>Prerequisites</h2>
+        <p>You need one of the following:</p>
+        <ul style="margin-bottom: 1.5rem; padding-left: 1.5rem;">
+            <li><strong>Docker</strong> &mdash; the simplest way to get started</li>
+            <li><strong>Swift 6.0+ toolchain</strong> &mdash; if you prefer to build from source</li>
+        </ul>
+
+        <h2>Quick Start</h2>
+        <ol class="steps">
+            <li>
+                <strong>Start the server</strong>
+                <p>With Docker Compose:</p>
+                <pre><code>docker compose up -d</code></pre>
+                <p>Or build from source:</p>
+                <pre><code>swift run SwiftREServer serve</code></pre>
+                <p>The API is now available at <code>http://localhost:8080</code>.</p>
+            </li>
+            <li>
+                <strong>Create a ruleset</strong>
+                <pre><code>curl -X POST http://localhost:8080/api/v1/rulesets \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "contact-form",
+    "ruleText": "RULE \"Email Required\"\nWHEN email IS NOT SET\nTHEN ERROR ON email \"Email is required\"\n\nRULE \"Age Check\" PRIORITY 10\nWHEN age IS SET AND age IS LESS THAN 18\nTHEN ERROR ON age \"Must be 18 or older\""
+  }'</code></pre>
+                <p>Response:</p>
+                <pre><code>{
+  "id": "contact-form",
+  "ruleCount": 2,
+  "ruleNames": ["Age Check", "Email Required"],
+  "hasSchema": false,
+  "createdAt": "2025-01-15T10:30:00Z",
+  "updatedAt": "2025-01-15T10:30:00Z"
+}</code></pre>
+            </li>
+            <li>
+                <strong>Execute the ruleset</strong>
+                <pre><code>curl -X POST http://localhost:8080/api/v1/rulesets/contact-form/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "facts": {
+      "firstName": "Jane",
+      "age": 16,
+      "email": null
+    }
+  }'</code></pre>
+                <p>Response:</p>
+                <pre><code>{
+  "events": [
+    {
+      "kind": "error",
+      "ruleName": "Age Check",
+      "field": "age",
+      "message": "Must be 18 or older"
+    },
+    {
+      "kind": "error",
+      "ruleName": "Email Required",
+      "field": "email",
+      "message": "Email is required"
+    }
+  ],
+  "facts": {
+    "firstName": "Jane",
+    "age": 16,
+    "email": null
+  },
+  "iterations": 1,
+  "terminationReason": "complete",
+  "summary": {
+    "errors": 2,
+    "warnings": 0,
+    "infos": 0,
+    "modifications": 0,
+    "total": 2
+  }
+}</code></pre>
+            </li>
+        </ol>
+
+        <h2>Understanding the Response</h2>
+        <p>The execution response contains:</p>
+        <table>
+            <thead>
+                <tr><th>Field</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>events</code></td><td>Array of events produced by fired rules. Each has a <code>kind</code>, <code>ruleName</code>, and <code>message</code>. Field-targeted events include a <code>field</code> property.</td></tr>
+                <tr><td><code>facts</code></td><td>The complete working memory state after execution. If any <code>SET</code> actions fired, modified values appear here.</td></tr>
+                <tr><td><code>iterations</code></td><td>How many evaluation passes were performed (1 for single-pass mode).</td></tr>
+                <tr><td><code>terminationReason</code></td><td>Why execution stopped: <code>complete</code>, <code>maxIterationsReached</code>, or <code>cycleDetected</code>.</td></tr>
+                <tr><td><code>summary</code></td><td>Event counts by kind, plus a total.</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Where to Go Next</h2>
+        <div class="card-grid">
+            <a class="card" href="rule-language.html">
+                <h3>Rule Language</h3>
+                <p>Learn the full rule syntax &mdash; conditions, actions, date expressions.</p>
+            </a>
+            <a class="card" href="api-reference.html">
+                <h3>API Reference</h3>
+                <p>All endpoints with schemas and curl examples.</p>
+            </a>
+            <a class="card" href="examples.html">
+                <h3>Examples</h3>
+                <p>Real-world rulesets you can copy and modify.</p>
+            </a>
+            <a class="card" href="integration.html">
+                <h3>Form Integration</h3>
+                <p>Connect SwiftRE to HTML forms for live validation.</p>
+            </a>
+        </div>
+
+    </div>
+</main>
+
+<script src="../js/nav.js"></script>
+<script src="../js/highlight.js"></script>
+</body>
+</html>

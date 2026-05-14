@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Reference — SwiftRE Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Toggle navigation">&#9776;</button>
+
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <h1>SwiftRE Docs</h1>
+        <p>Rules Engine Reference</p>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li>
+                <a href="rule-language.html">Rule Language</a>
+                <ul>
+                    <li><a href="conditions.html">Conditions</a></li>
+                    <li><a href="actions.html">Actions</a></li>
+                    <li><a href="dates.html">Dates</a></li>
+                </ul>
+            </li>
+            <li><a href="data-model.html">Data Model</a></li>
+            <li><a href="execution.html">Execution Modes</a></li>
+            <li><a href="api-reference.html">API Reference</a></li>
+            <li><a href="integration.html">Form Integration</a></li>
+            <li><a href="playground.html">Playground</a></li>
+            <li><a href="examples.html">Examples</a></li>
+            <li><a href="deployment.html">Deployment</a></li>
+        </ul>
+    </nav>
+</aside>
+
+<main class="content">
+    <div class="content-inner">
+
+        <h1>API Reference</h1>
+        <p class="lead">All endpoints use JSON (<code>Content-Type: application/json</code>). Base URL: <code>http://localhost:8080/api/v1</code></p>
+
+        <h2>Rulesets</h2>
+
+        <!-- CREATE -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method post">POST</span>
+                <span class="endpoint-path">/rulesets</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Create a new ruleset. The rule text is parsed and validated on creation.</p>
+                <p><strong>Request body:</strong></p>
+                <pre><code>{
+  "id": "contact-form",
+  "ruleText": "RULE \"Email Required\"\nWHEN email IS NOT SET\nTHEN ERROR ON email \"Email is required\""
+}</code></pre>
+                <p><strong>Response</strong> (201):</p>
+                <pre><code>{
+  "id": "contact-form",
+  "ruleCount": 1,
+  "ruleNames": ["Email Required"],
+  "hasSchema": false,
+  "createdAt": "2025-01-15T10:30:00Z",
+  "updatedAt": "2025-01-15T10:30:00Z"
+}</code></pre>
+                <p><strong>curl:</strong></p>
+                <pre><code>curl -X POST http://localhost:8080/api/v1/rulesets \
+  -H "Content-Type: application/json" \
+  -d '{"id":"contact-form","ruleText":"RULE \"Test\" WHEN age IS LESS THAN 18 THEN ERROR \"Too young\""}'</code></pre>
+                <p><strong>Errors:</strong> 400 (syntax errors in rule text), 409 (ID already exists)</p>
+            </div>
+        </div>
+
+        <!-- LIST -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="endpoint-path">/rulesets</span>
+            </div>
+            <div class="endpoint-body">
+                <p>List all rulesets.</p>
+                <p><strong>Response</strong> (200):</p>
+                <pre><code>[
+  {
+    "id": "contact-form",
+    "ruleCount": 2,
+    "ruleNames": ["Age Check", "Email Required"],
+    "hasSchema": false,
+    "createdAt": "2025-01-15T10:30:00Z",
+    "updatedAt": "2025-01-15T10:30:00Z"
+  }
+]</code></pre>
+                <p><strong>curl:</strong></p>
+                <pre><code>curl http://localhost:8080/api/v1/rulesets</code></pre>
+            </div>
+        </div>
+
+        <!-- GET DETAIL -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="endpoint-path">/rulesets/:id</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Get a ruleset with its full rule text.</p>
+                <p><strong>Response</strong> (200): Same as list item, plus <code>"ruleText": "..."</code></p>
+                <p><strong>curl:</strong></p>
+                <pre><code>curl http://localhost:8080/api/v1/rulesets/contact-form</code></pre>
+                <p><strong>Errors:</strong> 404 (not found)</p>
+            </div>
+        </div>
+
+        <!-- UPDATE -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method put">PUT</span>
+                <span class="endpoint-path">/rulesets/:id</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Update a ruleset's rule text.</p>
+                <p><strong>Request body:</strong></p>
+                <pre><code>{"ruleText": "RULE \"Updated\" WHEN status IS \"new\" THEN INFO \"Updated rule\""}</code></pre>
+                <p><strong>curl:</strong></p>
+                <pre><code>curl -X PUT http://localhost:8080/api/v1/rulesets/contact-form \
+  -H "Content-Type: application/json" \
+  -d '{"ruleText":"RULE \"Updated\" WHEN status IS \"new\" THEN INFO \"Updated\""}'</code></pre>
+                <p><strong>Errors:</strong> 400 (syntax errors), 404 (not found)</p>
+            </div>
+        </div>
+
+        <!-- DELETE -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method delete">DELETE</span>
+                <span class="endpoint-path">/rulesets/:id</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Delete a ruleset.</p>
+                <p><strong>Response:</strong> 204 (no content)</p>
+                <p><strong>curl:</strong></p>
+                <pre><code>curl -X DELETE http://localhost:8080/api/v1/rulesets/contact-form</code></pre>
+                <p><strong>Errors:</strong> 404 (not found)</p>
+            </div>
+        </div>
+
+        <h2>Execution</h2>
+
+        <!-- EXECUTE -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method post">POST</span>
+                <span class="endpoint-path">/rulesets/:id/execute</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Execute a ruleset against a set of facts. Nested JSON objects are flattened to dot-notation paths. Supports date arithmetic and date difference expressions.</p>
+                <p><strong>Request body:</strong></p>
+                <pre><code>{
+  "facts": {
+    "firstName": "Jane",
+    "age": 16,
+    "email": null
+  },
+  "mode": "singlePass"
+}</code></pre>
+                <p>For iterative mode:</p>
+                <pre><code>{
+  "facts": {"orderTotal": 150},
+  "mode": {"iterative": 10},
+  "synonyms": {"order total": "orderTotal"}
+}</code></pre>
+                <p><strong>Response</strong> (200):</p>
+                <pre><code>{
+  "events": [
+    {
+      "kind": "error",
+      "ruleName": "Age Check",
+      "field": "age",
+      "message": "Must be 18 or older"
+    }
+  ],
+  "facts": {
+    "firstName": "Jane",
+    "age": 16,
+    "email": null
+  },
+  "iterations": 1,
+  "terminationReason": "complete",
+  "summary": {
+    "errors": 1,
+    "warnings": 0,
+    "infos": 0,
+    "modifications": 0,
+    "total": 1
+  }
+}</code></pre>
+                <p><strong>curl:</strong></p>
+                <pre><code>curl -X POST http://localhost:8080/api/v1/rulesets/contact-form/execute \
+  -H "Content-Type: application/json" \
+  -d '{"facts":{"age":16,"email":null}}'</code></pre>
+                <p><strong>Errors:</strong> 400 (malformed body), 404 (ruleset not found)</p>
+            </div>
+        </div>
+
+        <h2>Editor Support</h2>
+
+        <!-- VALIDATE -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method post">POST</span>
+                <span class="endpoint-path">/validate</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Parse rule text without saving. Always returns 200; check the <code>valid</code> field.</p>
+                <p><strong>Request body:</strong></p>
+                <pre><code>{
+  "ruleText": "RULE \"Test\" WHEN age IS LESS THAN 18 THEN ERROR \"Too young\"",
+  "rulesetId": "contact-form"
+}</code></pre>
+                <p><code>rulesetId</code> is optional &mdash; if provided, schema warnings are included.</p>
+                <p><strong>Response</strong> (valid):</p>
+                <pre><code>{
+  "valid": true,
+  "ruleCount": 1,
+  "ruleNames": ["Test"],
+  "referencedFields": ["age"]
+}</code></pre>
+                <p><strong>Response</strong> (invalid):</p>
+                <pre><code>{
+  "valid": false,
+  "error": "Expected condition after WHEN, got end of input"
+}</code></pre>
+                <p><strong>curl:</strong></p>
+                <pre><code>curl -X POST http://localhost:8080/api/v1/validate \
+  -H "Content-Type: application/json" \
+  -d '{"ruleText":"RULE \"Test\" WHEN age IS LESS THAN 18 THEN ERROR \"Too young\""}'</code></pre>
+            </div>
+        </div>
+
+        <!-- OPERATORS -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="endpoint-path">/schema/operators</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Returns all comparison operators grouped by data type, plus date value references, date arithmetic forms, and date difference forms.</p>
+                <p><strong>curl:</strong></p>
+                <pre><code>curl http://localhost:8080/api/v1/schema/operators</code></pre>
+            </div>
+        </div>
+
+        <!-- ACTIONS -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="endpoint-path">/schema/actions</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Returns all action types with syntax and descriptions.</p>
+                <p><strong>curl:</strong></p>
+                <pre><code>curl http://localhost:8080/api/v1/schema/actions</code></pre>
+            </div>
+        </div>
+
+        <!-- SYNONYMS GET -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="endpoint-path">/rulesets/:id/synonyms</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Get synonym mappings for a ruleset.</p>
+                <p><strong>Response</strong> (200):</p>
+                <pre><code>{"synonyms": {"customer age": "demographics.age"}}</code></pre>
+                <p><strong>curl:</strong></p>
+                <pre><code>curl http://localhost:8080/api/v1/rulesets/contact-form/synonyms</code></pre>
+            </div>
+        </div>
+
+        <!-- SYNONYMS PUT -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method put">PUT</span>
+                <span class="endpoint-path">/rulesets/:id/synonyms</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Update synonym mappings for a ruleset.</p>
+                <p><strong>Request body:</strong></p>
+                <pre><code>{
+  "synonyms": {
+    "customer age": "demographics.age",
+    "zip code": "address.zip"
+  }
+}</code></pre>
+                <p><strong>curl:</strong></p>
+                <pre><code>curl -X PUT http://localhost:8080/api/v1/rulesets/contact-form/synonyms \
+  -H "Content-Type: application/json" \
+  -d '{"synonyms":{"customer age":"demographics.age"}}'</code></pre>
+            </div>
+        </div>
+
+        <!-- FIELDS -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="endpoint-path">/rulesets/:id/fields</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Returns all fact paths known for a ruleset, derived from rule conditions/actions and prior executions.</p>
+                <p><strong>Response</strong> (200):</p>
+                <pre><code>{
+  "fields": [
+    {"path": "age", "synonym": "customer age", "lastSeenType": "integer"},
+    {"path": "email", "synonym": null, "lastSeenType": "string"}
+  ]
+}</code></pre>
+                <p><strong>curl:</strong></p>
+                <pre><code>curl http://localhost:8080/api/v1/rulesets/contact-form/fields</code></pre>
+            </div>
+        </div>
+
+        <!-- SCHEMA GET/PUT -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="endpoint-path">/rulesets/:id/schema</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Get the data model schema for a ruleset.</p>
+                <p><strong>curl:</strong></p>
+                <pre><code>curl http://localhost:8080/api/v1/rulesets/contact-form/schema</code></pre>
+            </div>
+        </div>
+
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method put">PUT</span>
+                <span class="endpoint-path">/rulesets/:id/schema</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Update the data model schema. See <a href="data-model.html#schema-validation">Data Model: Schema Validation</a>.</p>
+                <p><strong>curl:</strong></p>
+                <pre><code>curl -X PUT http://localhost:8080/api/v1/rulesets/contact-form/schema \
+  -H "Content-Type: application/json" \
+  -d '{"fields":{"age":{"type":"integer","required":true}}}'</code></pre>
+            </div>
+        </div>
+
+        <h2>Error Responses</h2>
+        <p>All errors follow the same format:</p>
+        <pre><code>{
+  "error": true,
+  "reason": "Ruleset 'missing-id' not found"
+}</code></pre>
+        <table>
+            <thead>
+                <tr><th>Status</th><th>Meaning</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>400</td><td>Bad request (malformed JSON, syntax errors in rule text)</td></tr>
+                <tr><td>404</td><td>Ruleset not found</td></tr>
+                <tr><td>409</td><td>Conflict (ruleset ID already exists)</td></tr>
+                <tr><td>501</td><td>Not implemented (reserved endpoints)</td></tr>
+            </tbody>
+        </table>
+
+    </div>
+</main>
+
+<script src="../js/nav.js"></script>
+<script src="../js/highlight.js"></script>
+</body>
+</html>

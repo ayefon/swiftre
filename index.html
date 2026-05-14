@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwiftRE — A Business Rules Engine You Can Read</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Toggle navigation">&#9776;</button>
+
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <h1>SwiftRE Docs</h1>
+        <p>Rules Engine Reference</p>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="pages/getting-started.html">Getting Started</a></li>
+            <li>
+                <a href="pages/rule-language.html">Rule Language</a>
+                <ul>
+                    <li><a href="pages/conditions.html">Conditions</a></li>
+                    <li><a href="pages/actions.html">Actions</a></li>
+                    <li><a href="pages/dates.html">Dates</a></li>
+                </ul>
+            </li>
+            <li><a href="pages/data-model.html">Data Model</a></li>
+            <li><a href="pages/execution.html">Execution Modes</a></li>
+            <li><a href="pages/api-reference.html">API Reference</a></li>
+            <li><a href="pages/integration.html">Form Integration</a></li>
+            <li><a href="pages/playground.html">Playground</a></li>
+            <li><a href="pages/examples.html">Examples</a></li>
+            <li><a href="pages/deployment.html">Deployment</a></li>
+        </ul>
+    </nav>
+</aside>
+
+<main class="content">
+    <div class="content-inner">
+
+        <div class="hero">
+            <h1>SwiftRE</h1>
+            <p class="tagline">A business rules engine you can read. Write validation logic in plain English, execute it via a REST API, and get structured events for your application.</p>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">&#128221;</div>
+                <h3>English-like Rules</h3>
+                <p>Write rules that read like sentences. No code compilation, no DSL to learn &mdash; just WHEN / THEN logic that business stakeholders can review.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">&#9889;</div>
+                <h3>REST API</h3>
+                <p>Create rulesets, execute them against JSON facts, and get results &mdash; all through a simple HTTP API. Integrate from any language or platform.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">&#128276;</div>
+                <h3>Event-driven Output</h3>
+                <p>Rules produce typed events (errors, warnings, info, signals) instead of side effects. Your application decides how to present and handle each event.</p>
+            </div>
+        </div>
+
+        <div class="example-block">
+            <h2>Hello World</h2>
+            <p class="annotation">A simple validation ruleset that checks a contact form submission:</p>
+            <pre><code class="language-swiftre">RULE "Email Required"
+WHEN email IS NOT SET
+THEN ERROR ON email "An email address is required"
+
+RULE "Age Check" PRIORITY 10
+WHEN age IS SET AND age IS LESS THAN 18
+THEN ERROR ON age "You must be at least 18 years old"
+
+RULE "Welcome"
+WHEN firstName IS SET
+THEN INFO "Welcome, {firstName}!"</code></pre>
+
+            <p style="margin-top: 1rem;">Execute this ruleset with facts like <code>{"age": 16, "email": null, "firstName": "Jane"}</code> and you get structured events:</p>
+            <pre><code>{
+  "events": [
+    {"kind": "error", "ruleName": "Email Required",
+     "field": "email", "message": "An email address is required"},
+    {"kind": "error", "ruleName": "Age Check",
+     "field": "age", "message": "You must be at least 18 years old"},
+    {"kind": "info",  "ruleName": "Welcome",
+     "message": "Welcome, Jane!"}
+  ],
+  "summary": {"errors": 2, "warnings": 0, "infos": 1, "total": 3}
+}</code></pre>
+        </div>
+
+        <h2>Where to Start</h2>
+        <div class="card-grid">
+            <a class="card" href="pages/getting-started.html">
+                <h3>Getting Started</h3>
+                <p>Run the server, create your first ruleset, and execute it in three steps.</p>
+            </a>
+            <a class="card" href="pages/rule-language.html">
+                <h3>Language Reference</h3>
+                <p>Complete guide to the rule syntax &mdash; conditions, actions, dates, and more.</p>
+            </a>
+            <a class="card" href="pages/api-reference.html">
+                <h3>API Reference</h3>
+                <p>Every endpoint with request/response schemas and copy-paste curl commands.</p>
+            </a>
+            <a class="card" href="pages/playground.html">
+                <h3>Playground</h3>
+                <p>Write rules and test them interactively against sample data.</p>
+            </a>
+        </div>
+
+    </div>
+</main>
+
+<script src="js/nav.js"></script>
+<script src="js/highlight.js"></script>
+</body>
+</html>
