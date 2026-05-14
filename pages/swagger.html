@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swagger UI — SwiftRE Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+    <style>
+        .swagger-container {
+            margin-top: 1.5rem;
+        }
+        /* Override Swagger UI styles to fit within the docs layout */
+        .swagger-ui .topbar { display: none; }
+        .swagger-ui .info { margin: 0; padding: 0; }
+        .swagger-ui .info .title { font-size: 0; height: 0; margin: 0; }
+        .swagger-ui .scheme-container { padding: 0.75rem 0; margin: 0; background: none; box-shadow: none; }
+        .swagger-ui .opblock-tag { font-size: 1.125rem; }
+        .swagger-ui .opblock .opblock-summary-method { min-width: 70px; }
+        .swagger-ui .btn { box-shadow: none; }
+        .swagger-ui table tbody tr td { padding: 0.5rem 0.75rem; }
+    </style>
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Toggle navigation">&#9776;</button>
+
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <h1>SwiftRE Docs</h1>
+        <p>Rules Engine Reference</p>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li>
+                <a href="rule-language.html">Rule Language</a>
+                <ul>
+                    <li><a href="conditions.html">Conditions</a></li>
+                    <li><a href="actions.html">Actions</a></li>
+                    <li><a href="dates.html">Dates</a></li>
+                </ul>
+            </li>
+            <li><a href="data-model.html">Data Model</a></li>
+            <li><a href="execution.html">Execution Modes</a></li>
+            <li>
+                <a href="api-reference.html">API Reference</a>
+                <ul>
+                    <li><a href="swagger.html">Swagger UI</a></li>
+                </ul>
+            </li>
+            <li><a href="integration.html">Form Integration</a></li>
+            <li><a href="playground.html">Playground</a></li>
+            <li><a href="examples.html">Examples</a></li>
+            <li><a href="deployment.html">Deployment</a></li>
+        </ul>
+    </nav>
+</aside>
+
+<main class="content">
+    <div class="content-inner" style="max-width: 1100px;">
+
+        <h1>Swagger UI</h1>
+        <p class="lead">Interactive API documentation generated from the <a href="../openapi.yaml">OpenAPI specification</a>. Expand any endpoint to see request/response schemas and try requests against a running server.</p>
+
+        <div class="callout warning">
+            <p><strong>Live requests:</strong> The "Try it out" feature sends real HTTP requests. Make sure the SwiftRE server is running at the configured URL for interactive testing.</p>
+        </div>
+
+        <div class="swagger-container" id="swagger-ui"></div>
+
+    </div>
+</main>
+
+<script src="../js/nav.js"></script>
+<script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+<script>
+    SwaggerUIBundle({
+        url: "../openapi.yaml",
+        dom_id: "#swagger-ui",
+        presets: [
+            SwaggerUIBundle.presets.apis,
+            SwaggerUIBundle.SwaggerUIStandalonePreset
+        ],
+        layout: "BaseLayout",
+        defaultModelsExpandDepth: 1,
+        docExpansion: "list",
+        tryItOutEnabled: false
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,666 @@
+openapi: 3.0.3
+info:
+  title: SwiftRE API
+  description: REST API for the SwiftRE rules engine. Create and manage rulesets, execute rules against JSON facts, and get structured validation events.
+  version: 1.0.0
+  contact:
+    email: don@babcock.org
+
+servers:
+  - url: /api/v1
+    description: Local server
+
+tags:
+  - name: Rulesets
+    description: CRUD operations for rulesets
+  - name: Execution
+    description: Run rulesets against facts
+  - name: Editor
+    description: Editor support endpoints (validation, schema, synonyms, fields)
+
+paths:
+  /rulesets:
+    post:
+      tags: [Rulesets]
+      summary: Create a ruleset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRulesetRequest'
+            example:
+              id: customer-validation
+              ruleText: "RULE \"Age Check\" PRIORITY 10\nWHEN age IS LESS THAN 18\nTHEN ERROR \"Must be 18 or older\"\n\nRULE \"Email Required\"\nWHEN email IS NOT SET\nTHEN ERROR \"Email is required\""
+      responses:
+        '201':
+          description: Ruleset created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RulesetSummary'
+        '400':
+          description: Rule text has syntax errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ruleset with this ID already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags: [Rulesets]
+      summary: List all rulesets
+      responses:
+        '200':
+          description: Array of ruleset summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RulesetSummary'
+
+  /rulesets/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Ruleset identifier
+
+    get:
+      tags: [Rulesets]
+      summary: Get ruleset detail
+      responses:
+        '200':
+          description: Ruleset with full rule text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RulesetDetail'
+        '404':
+          description: Ruleset not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags: [Rulesets]
+      summary: Update ruleset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRulesetRequest'
+      responses:
+        '200':
+          description: Updated ruleset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RulesetDetail'
+        '400':
+          description: Rule text has syntax errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ruleset not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Rulesets]
+      summary: Delete ruleset
+      responses:
+        '204':
+          description: Ruleset deleted
+        '404':
+          description: Ruleset not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /rulesets/{id}/execute:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    post:
+      tags: [Execution]
+      summary: Execute ruleset against facts
+      description: |
+        Submit a JSON object of facts (the data model), run the named ruleset against it,
+        and receive all events produced by fired rules. Nested JSON objects are flattened
+        to dot-notation paths (e.g. `address.city`).
+
+        Rules support date arithmetic (`TODAY + 30 DAYS`, `` `field` - 7 DAYS ``) and
+        date difference expressions (`DAYS BETWEEN field1 AND field2`) in both conditions
+        and SET actions. Date arithmetic produces date values; date difference produces integers.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteRequest'
+            example:
+              facts:
+                firstName: Jane
+                age: 16
+                email: null
+              mode: singlePass
+      responses:
+        '200':
+          description: Execution results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecuteResponse'
+        '400':
+          description: Malformed request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ruleset not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /rulesets/{id}/analyze:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    post:
+      tags: [Execution]
+      summary: Analyze ruleset (reserved)
+      description: Reserved for future contradiction and subsumption detection.
+      responses:
+        '501':
+          description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /rulesets/{id}/synonyms:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      tags: [Editor]
+      summary: Get synonym mappings
+      responses:
+        '200':
+          description: Synonym mappings for the ruleset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SynonymsResponse'
+        '404':
+          description: Ruleset not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags: [Editor]
+      summary: Update synonym mappings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SynonymsRequest'
+            example:
+              synonyms:
+                customer age: age
+                zip code: address.zip
+      responses:
+        '200':
+          description: Updated synonyms
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SynonymsResponse'
+        '404':
+          description: Ruleset not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /rulesets/{id}/fields:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      tags: [Editor]
+      summary: Get known fields
+      description: Returns all fact paths known for a ruleset, derived from rule conditions/actions and prior executions.
+      responses:
+        '200':
+          description: Field list with synonyms and types
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FieldsResponse'
+        '404':
+          description: Ruleset not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /rulesets/{id}/schema:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      tags: [Editor]
+      summary: Get data model schema
+      responses:
+        '200':
+          description: Schema field definitions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaResponse'
+        '404':
+          description: Ruleset not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags: [Editor]
+      summary: Update data model schema
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchemaRequest'
+      responses:
+        '200':
+          description: Updated schema
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaResponse'
+        '404':
+          description: Ruleset not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /validate:
+    post:
+      tags: [Editor]
+      summary: Validate rule text
+      description: Parse rule text without saving. Returns structured error information for UI highlighting.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateRequest'
+            example:
+              ruleText: "RULE \"Test\" WHEN age IS LESS THAN 18 THEN ERROR \"Too young\""
+      responses:
+        '200':
+          description: Validation result (always 200, check `valid` field)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateResponse'
+
+  /schema/operators:
+    get:
+      tags: [Editor]
+      summary: Get available operators
+      description: Returns all comparison operators grouped by data type.
+      responses:
+        '200':
+          description: Operators by type
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+              example:
+                numeric: [equal, notEqual, greaterThan, greaterThanOrEqual, lessThan, lessThanOrEqual]
+                string: [equal, notEqual, contains, startsWith, endsWith, matches]
+                date: [before, after, onOrBefore, onOrAfter]
+                boolean: [equal, notEqual]
+                presence: [isSet, isNotSet]
+
+  /schema/actions:
+    get:
+      tags: [Editor]
+      summary: Get available actions
+      description: Returns action types for the THEN clause.
+      responses:
+        '200':
+          description: Action definitions
+          content:
+            application/json:
+              example:
+                actions:
+                  - type: ERROR
+                    description: Emit an error event with a message
+                    syntax: ERROR "message"
+                  - type: WARNING
+                    description: Emit a warning event with a message
+                    syntax: WARNING "message"
+                  - type: INFO
+                    description: Emit an informational event with a message
+                    syntax: INFO "message"
+                  - type: SET
+                    description: Modify a fact value. Supports literal values, date arithmetic, and date difference expressions.
+                    syntax: SET field TO value
+                    examples:
+                      - SET status TO "active"
+                      - SET expiryDate TO TODAY + 30 DAYS
+                      - SET renewalDate TO `contractStart` + 1 YEAR
+                      - SET duration TO DAYS BETWEEN startDate AND endDate
+                  - type: SIGNAL
+                    description: Emit a custom event for application event handlers. Payload supports {field} interpolation.
+                    syntax: SIGNAL AN EVENT OF TYPE type WITH A PAYLOAD OF "data"
+                dateExpressions:
+                  dateArithmetic:
+                    description: Add or subtract a duration from a date value or field
+                    syntax: "<date> +/- N DAYS|MONTHS|YEARS"
+                    examples:
+                      - TODAY + 30 DAYS
+                      - "`startDate` - 7 DAYS"
+                      - "`contractStart` + 1 YEAR"
+                  dateDifference:
+                    description: Compute the integer difference between two dates
+                    syntax: "DAYS|MONTHS|YEARS BETWEEN <date> AND <date>"
+                    examples:
+                      - DAYS BETWEEN startDate AND endDate
+                      - MONTHS BETWEEN hireDate AND TODAY
+                      - YEARS BETWEEN birthDate AND TODAY
+
+components:
+  schemas:
+    CreateRulesetRequest:
+      type: object
+      required: [id, ruleText]
+      properties:
+        id:
+          type: string
+          description: Unique ruleset identifier
+        ruleText:
+          type: string
+          description: Rule definitions in SwiftRE rule language
+
+    UpdateRulesetRequest:
+      type: object
+      required: [ruleText]
+      properties:
+        ruleText:
+          type: string
+
+    RulesetSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        ruleCount:
+          type: integer
+        ruleNames:
+          type: array
+          items:
+            type: string
+        hasSchema:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    RulesetDetail:
+      allOf:
+        - $ref: '#/components/schemas/RulesetSummary'
+        - type: object
+          properties:
+            ruleText:
+              type: string
+
+    ExecuteRequest:
+      type: object
+      required: [facts]
+      properties:
+        facts:
+          type: object
+          description: Arbitrary JSON object. Nested objects are flattened to dot-paths.
+        mode:
+          description: 'Evaluation mode. String "singlePass" or object {"iterative": maxIterations}.'
+          oneOf:
+            - type: string
+              enum: [singlePass]
+            - type: object
+              properties:
+                iterative:
+                  type: integer
+        synonyms:
+          type: object
+          additionalProperties:
+            type: string
+          description: Maps human-friendly names to canonical fact paths.
+
+    ExecuteResponse:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+        facts:
+          type: object
+          description: Complete working memory state after execution (dot-notation paths).
+        iterations:
+          type: integer
+        terminationReason:
+          type: string
+          enum: [complete, maxIterationsReached, cycleDetected]
+        summary:
+          $ref: '#/components/schemas/Summary'
+        schemaWarnings:
+          type: array
+          items:
+            type: string
+          nullable: true
+
+    Event:
+      type: object
+      properties:
+        kind:
+          type: string
+          description: Event type (error, warning, info, dataModification)
+        ruleName:
+          type: string
+        message:
+          type: string
+          nullable: true
+        field:
+          type: string
+          nullable: true
+          description: Target field name when using ON syntax (e.g., ERROR ON email "msg")
+        modifications:
+          type: object
+        payload:
+          type: object
+
+    Summary:
+      type: object
+      properties:
+        errors:
+          type: integer
+        warnings:
+          type: integer
+        infos:
+          type: integer
+        modifications:
+          type: integer
+        total:
+          type: integer
+
+    ValidateRequest:
+      type: object
+      required: [ruleText]
+      properties:
+        ruleText:
+          type: string
+        rulesetId:
+          type: string
+          nullable: true
+          description: Optional ruleset ID for schema validation.
+
+    ValidateResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        ruleCount:
+          type: integer
+          nullable: true
+        ruleNames:
+          type: array
+          items:
+            type: string
+          nullable: true
+        referencedFields:
+          type: array
+          items:
+            type: string
+          nullable: true
+        error:
+          type: string
+          nullable: true
+        line:
+          type: integer
+          nullable: true
+        column:
+          type: integer
+          nullable: true
+        schemaWarnings:
+          type: array
+          items:
+            type: string
+          nullable: true
+
+    SynonymsRequest:
+      type: object
+      required: [synonyms]
+      properties:
+        synonyms:
+          type: object
+          additionalProperties:
+            type: string
+
+    SynonymsResponse:
+      type: object
+      properties:
+        synonyms:
+          type: object
+          additionalProperties:
+            type: string
+
+    SchemaRequest:
+      type: object
+      required: [fields]
+      properties:
+        fields:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/FieldSchema'
+
+    SchemaResponse:
+      type: object
+      properties:
+        fields:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/FieldSchema'
+
+    FieldSchema:
+      type: object
+      properties:
+        type:
+          type: string
+        required:
+          type: boolean
+        description:
+          type: string
+
+    FieldsResponse:
+      type: object
+      properties:
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldInfo'
+
+    FieldInfo:
+      type: object
+      properties:
+        path:
+          type: string
+        synonym:
+          type: string
+          nullable: true
+        lastSeenType:
+          type: string
+          nullable: true
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: boolean
+        reason:
+          type: string
